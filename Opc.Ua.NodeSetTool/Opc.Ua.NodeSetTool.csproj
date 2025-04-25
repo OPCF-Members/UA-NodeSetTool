@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Opc.Ua.NodeSetTool</AssemblyName>
+    <RootNamespace>NodeSetTool</RootNamespace>
+    <VersionSuffix>1.0.$([System.DateTime]::UtcNow.ToString(yyMM)).$([System.DateTime]::UtcNow.ToString(ddmm))</VersionSuffix>
+    <AssemblyVersion Condition=" '$(VersionSuffix)' == '' ">0.0.0.1</AssemblyVersion>
+    <AssemblyVersion Condition=" '$(VersionSuffix)' != '' ">$(VersionSuffix)</AssemblyVersion>
+    <Version Condition=" '$(VersionSuffix)' == '' ">0.0.1.0</Version>
+    <Version Condition=" '$(VersionSuffix)' != '' ">$(VersionSuffix)</Version>
+    <Copyright>Copyright © OPC Foundation</Copyright>
+    <Product>OPC UA NodeSet Tool</Product>
+    <IntermediateOutputPath>$(SolutionDir)build\obj\$(MSBuildProjectName)\$(Configuration)\</IntermediateOutputPath>
+    <PackAsTool>True</PackAsTool>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>$(SolutionDir)build\bin\$(MSBuildProjectName)\$(Configuration)\</OutputPath>
+    <DefineConstants>$(DefineConstants);</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>$(SolutionDir)build\bin\$(MSBuildProjectName)\$(Configuration)\</OutputPath>
+    <DefineConstants>$(DefineConstants);</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Core" Version="1.5.376.213" />
+    <PackageReference Include="SharpCompress" Version="0.39.0" />
+    <PackageReference Include="System.Formats.Asn1" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Opc.Ua.JsonNodeSet\src\Opc.Ua.JsonNodeSet\Opc.Ua.JsonNodeSet.csproj" />
+  </ItemGroup>
+
+</Project>
