@@ -221,7 +221,7 @@ namespace NodeSetTool
                 if (serializer1.Compare(serializer2))
                 {
                     Log.Info($"The two files are the same!");
-                    Environment.Exit(0);
+                    return Task.CompletedTask;
                 }
 
                 Log.Warning($"The two files are different!");

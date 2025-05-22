@@ -3,33 +3,56 @@ using NodeSetTool;
 
 try
 {
-   //NodeSetToolConsole.Run(args);
+    NodeSetToolConsole.Run(args);
 
-    NodeSetToolConsole.Run([
-        "convert",
-        "--in", @"D:\Work\OPC\nodesets\v105\Schema\Opc.Ua.NodeSet2.Services.xml",
-        "--type", "tar.gz",
-        "--max", "100"
-    ]);
+    //const string FileName = "Opc.Ua.NodeSet2.Services";
+    //const string InputDirectory = @"D:\Work\OPC\nodesets\v105\Schema\";
+    //const string OutputDirectory = @"D:\Work\OPC\UA-NodeSetTool2\examples\";
 
-    NodeSetToolConsole.Run([
-        "compare",
-        "--in", @"D:\Work\OPC\nodesets\v105\Schema\Opc.Ua.NodeSet2.Services.xml",
-        "--target", @"D:\Work\OPC\nodesets\v105\Schema\Opc.Ua.NodeSet2.Services.tar.gz"
-    ]);
+    //const string FileName = "DemoModel.NodeSet2";
+    //const string InputDirectory = @"D:\Work\OPC\nodesets\v105\DemoModel\";
+    //const string OutputDirectory = @"D:\Work\OPC\UA-NodeSetTool2\examples\";
 
-    NodeSetToolConsole.Run([
-        "convert",
-        "--in", @"D:\Work\OPC\nodesets\v105\Schema\Opc.Ua.NodeSet2.Services.tar.gz",
-        "--out", @"D:\Work\OPC\nodesets\v105\Schema\Opc.Ua.NodeSet2.Services.copy.xml",
-        "--type", "xml"
-    ]);
+    //NodeSetToolConsole.Run([
+    //    "convert",
+    //    "--in", $"{InputDirectory}{FileName}.xml",
+    //    "--out", $"{OutputDirectory}{FileName}.json",
+    //    "--type", "json"
+    //]);
 
-    NodeSetToolConsole.Run([
-        "compare",
-        "--in", @"D:\Work\OPC\nodesets\v105\Schema\Opc.Ua.NodeSet2.Services.xml",
-        "--target", @"D:\Work\OPC\nodesets\v105\Schema\Opc.Ua.NodeSet2.Services.copy.xml"
-    ]);
+    //NodeSetToolConsole.Run([
+    //    "compare",
+    //    "--in", $"{InputDirectory}{FileName}.xml",
+    //    "--target", $"{OutputDirectory}{FileName}.json",
+    //]);
+
+
+    //NodeSetToolConsole.Run([
+    //    "convert",
+    //    "--in", $"{InputDirectory}{FileName}.xml",
+    //    "--out", $"{OutputDirectory}{FileName}.tar.gz",
+    //    "--type", "tar.gz",
+    //    "--max", "100"
+    //]);
+
+    //NodeSetToolConsole.Run([
+    //    "compare",
+    //    "--in", $"{InputDirectory}{FileName}.xml",
+    //    "--target", $"{OutputDirectory}{FileName}.tar.gz",
+    //]);
+
+    //NodeSetToolConsole.Run([
+    //    "convert",
+    //    "--in", $"{InputDirectory}{FileName}.tar.gz",
+    //    "--out", $"{OutputDirectory}{FileName}.xml",
+    //    "--type", "xml"
+    //]);
+
+    //NodeSetToolConsole.Run([
+    //    "compare",
+    //    "--in", $"{InputDirectory}{FileName}.xml",
+    //    "--target",  $"{OutputDirectory}{FileName}.xml",
+    //]);
 }
 catch (CommandParsingException e)
 {
