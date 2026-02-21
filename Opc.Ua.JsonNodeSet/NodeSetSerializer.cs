@@ -16,7 +16,7 @@ namespace NodeSetTool
     public class NodeSetSerializer
     {
         private ServiceMessageContext? m_context;
-        private Dictionary<string,string>? m_aliases;
+        private Dictionary<string, string>? m_aliases;
         private Dictionary<string, Json.ModelDefinition>? m_models;
         private Dictionary<string, Json.UANode>? m_nodes;
         private List<Json.UANode>? m_sequence;
@@ -275,7 +275,7 @@ namespace NodeSetTool
             if (original == null || target == null) return false;
 
             if (original.NodeId != target.NodeId) { m_errors.Add(new CompareError(original, nameof(Json.UANode.NodeId), original.NodeId, target.NodeId)); return false; }
-            if (original.NodeClass != target.NodeClass)  { m_errors.Add(new CompareError(original, nameof(Json.UANode.NodeClass), original.NodeClass, target.NodeClass)); return false; }
+            if (original.NodeClass != target.NodeClass) { m_errors.Add(new CompareError(original, nameof(Json.UANode.NodeClass), original.NodeClass, target.NodeClass)); return false; }
             if (original.SymbolicName != target.SymbolicName) { m_errors.Add(new CompareError(original, nameof(Json.UANode.SymbolicName), original.SymbolicName, target.SymbolicName)); return false; }
             if (original.BrowseName != target.BrowseName) { m_errors.Add(new CompareError(original, nameof(Json.UANode.BrowseName), original.BrowseName, target.BrowseName)); return false; }
             if (!Compare(original.DisplayName, target.DisplayName)) { m_errors.Add(new CompareError(original, nameof(Json.UANode.DisplayName), original.DisplayName, target.DisplayName)); return false; }
@@ -901,7 +901,7 @@ namespace NodeSetTool
                     case Json.UADataType dt: { nodes.Add(ToXmlNode(dt)); break; }
                     case Json.UAVariableType vt: { nodes.Add(ToXmlNode(vt)); break; }
                     case Json.UAObjectType ot: { nodes.Add(ToXmlNode(ot)); break; }
-                    case Json.UAObject on: { nodes.Add(ToXmlNode(on));  break; }
+                    case Json.UAObject on: { nodes.Add(ToXmlNode(on)); break; }
                     case Json.UAVariable vn: { nodes.Add(ToXmlNode(vn)); break; }
                     case Json.UAMethod mn: { nodes.Add(ToXmlNode(mn)); break; }
                     case Json.UAView wn: { nodes.Add(ToXmlNode(wn)); break; }
@@ -960,7 +960,7 @@ namespace NodeSetTool
 
             current.FileSet = new Json.FileSetInfo()
             {
-                Current = currentFileCount+1,
+                Current = currentFileCount + 1,
                 Last = 0
             };
 

@@ -74,22 +74,22 @@ namespace NodeSetTool
                     case JsonFile:
                     case XmlFile:
                     case ArchiveFile:
-                    {
-                        if (inputFilePath.EndsWith("." + outputFileType))
                         {
-                            _logger.LogError("Output file type must be different from the input file type.");
-                            Environment.Exit(1);
+                            if (inputFilePath.EndsWith("." + outputFileType))
+                            {
+                                _logger.LogError("Output file type must be different from the input file type.");
+                                Environment.Exit(1);
+                            }
+
+                            break;
                         }
 
-                        break;
-                    }
-
                     default:
-                    {
-                        _logger.LogError("Output file type not supported (choose: {JsonFile} | {XmlFile} | {ArchiveFile}).", JsonFile, XmlFile, ArchiveFile);
-                        Environment.Exit(1);
-                        break;
-                    }
+                        {
+                            _logger.LogError("Output file type not supported (choose: {JsonFile} | {XmlFile} | {ArchiveFile}).", JsonFile, XmlFile, ArchiveFile);
+                            Environment.Exit(1);
+                            break;
+                        }
                 }
 
                 try
@@ -100,22 +100,22 @@ namespace NodeSetTool
                     switch (outputFileType)
                     {
                         case XmlFile:
-                        {
-                            serializer.SaveXml(outputFilePath);
-                            break;
-                        }
+                            {
+                                serializer.SaveXml(outputFilePath);
+                                break;
+                            }
 
                         case JsonFile:
-                        {
-                            serializer.SaveJson(outputFilePath);
-                            break;
-                        }
+                            {
+                                serializer.SaveJson(outputFilePath);
+                                break;
+                            }
 
                         case ArchiveFile:
-                        {
-                            serializer.SaveArchive(outputFilePath, Math.Max(maxFileSize, 100));
-                            break;
-                        }
+                            {
+                                serializer.SaveArchive(outputFilePath, Math.Max(maxFileSize, 100));
+                                break;
+                            }
                     }
 
                     _logger.LogInformation("The file converted successfully!");
