@@ -1,3 +1,3 @@
-[submodule "nodeset"]
-	path = nodeset
+[submodule "nodesets"]
+	path = nodesets
 	url = https://github.com/OPCFoundation/UA-Nodeset.git

@@ -4,12 +4,10 @@
 
 .DESCRIPTION
     Run signing-key.ps1 first to set the signing environment variables, then run this script.
+    Version is determined automatically by Nerdbank.GitVersioning from version.json + git height.
 
         . .\signing-key.ps1
-        .\build.ps1 -Version 1.0.0
-
-.PARAMETER Version
-    The package/assembly version. Defaults to 0.0.1.
+        .\build.ps1
 
 .PARAMETER Configuration
     Build configuration. Defaults to Release.
@@ -24,7 +22,6 @@
     Skip signing even when signing environment variables are set.
 #>
 param(
-    [string]$Version = "0.0.1",
     [string]$Configuration = "Release",
     [string]$OutputDir = "$PSScriptRoot/build/nupkg",
     [switch]$SkipTests,
@@ -78,10 +75,7 @@ Invoke-DotNet restore
 # Build
 # ---------------------------------------------------------------------------
 Write-Step "Build ($Configuration)"
-Invoke-DotNet build -c $Configuration --no-restore `
-    /p:Version=$Version `
-    /p:AssemblyVersion=$Version `
-    /p:FileVersion=$Version
+Invoke-DotNet build -c $Configuration --no-restore
 
 # ---------------------------------------------------------------------------
 # Test
@@ -100,13 +94,11 @@ New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 # Library NuGet package
 Invoke-DotNet pack Opc.Ua.JsonNodeSet/Opc.Ua.JsonNodeSet.csproj `
     -c $Configuration --no-build `
-    /p:Version=$Version `
     -o $OutputDir
 
 # Tool NuGet package
 Invoke-DotNet pack Opc.Ua.NodeSetTool/Opc.Ua.NodeSetTool.csproj `
     -c $Configuration --no-build `
-    /p:Version=$Version `
     -o $OutputDir
 
 # ---------------------------------------------------------------------------
@@ -146,4 +138,4 @@ Write-Host "Packages:"
 Get-ChildItem "$OutputDir/*.nupkg" | ForEach-Object { Write-Host "  $_" }
 Write-Host ""
 Write-Host "Install the tool locally with:"
-Write-Host "  dotnet tool install --global --add-source $OutputDir Opc.Ua.NodeSetTool --version $Version" -ForegroundColor DarkGray
+Write-Host "  dotnet tool install --global --add-source $OutputDir Opc.Ua.NodeSetTool" -ForegroundColor DarkGray

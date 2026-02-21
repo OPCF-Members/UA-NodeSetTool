@@ -1,67 +1,150 @@
-## NodeSetTool
-### Overview
-This tool converts between different NodeSet formats.  
+# UA-NodeSetTool
 
-There are 3 formats defined:
+A .NET command-line tool and library for converting OPC UA NodeSets between XML, JSON, and TAR.GZ archive formats.
 
-1. XML (defined by a normative schema which can be found [here](https://github.com/OPCFoundation/UA-Nodeset/blob/latest/Schema/UANodeSet.xsd));
-2. JSON (defined by a proposed OpenAPI schema which can be found [here](https://github.com/OPCF-Members/UA-ModelCompiler/blob/master/NodeSetTool/json-nodeset-schema.json));
-3. GZIP (a compressed TAR archive containing the a multi-file version of the JSON format).
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| **Opc.Ua.NodeSetTool** | Command-line tool (distributed as a .NET global tool) for converting and comparing OPC UA NodeSet files. |
+| **Opc.Ua.JsonNodeSet** | Class library that provides serialization and deserialization of OPC UA NodeSets in XML, JSON, and TAR.GZ formats. Can be referenced from your own projects. |
+
+## Supported Formats
+
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| XML | `.xml` | Standard OPC UA NodeSet format ([UANodeSet.xsd](https://github.com/OPCFoundation/UA-Nodeset/blob/latest/Schema/UANodeSet.xsd)) |
+| JSON | `.json` | Compact JSON representation using an [OpenAPI schema](https://github.com/OPCF-Members/UA-ModelCompiler/blob/master/NodeSetTool/json-nodeset-schema.json) |
+| TAR.GZ | `.tar.gz` | Compressed archive that splits large NodeSets across multiple JSON files |
+
+### JSON Format
 
 The JSON format uses the [OpenAPI specification](https://spec.openapis.org/oas/v3.0.3.html) because of the numerous tools available that can process JSON schemas in that form. This means there is an unnecessary HTTP GET service defined. The UANodeSet schema is defined by the body of the GET service response. The schema also uses OpenAPI 3.0.3 since there is less tool support for OpenAPI 3.1 (e.g. it is planned for .NET 10.0).
 
-If useful, a version of the the schema that conforms to [JSON schema](https://json-schema.org/) could be published too.
+If useful, a version of the schema that conforms to [JSON schema](https://json-schema.org/) could be published too.
 
-The JSON form is designed to be easier for exception based parses by ordering the nodes: ReferenceTypes, DataTypes, VariableTypes, ObjectTypes, Variables, Methods, Objects and then Views. That said, perfect ordering is impossible since circular references between Nodes can exist and readers need to handle the possibility. In addition, no ordering is imposed on the list of individual types. 
+The JSON form is designed to be easier for exception based parsers by ordering the nodes: ReferenceTypes, DataTypes, VariableTypes, ObjectTypes, Variables, Methods, Objects and then Views. That said, perfect ordering is impossible since circular references between Nodes can exist and readers need to handle the possibility. No ordering is imposed on the list of individual types.
 
-The archive format contains a single NodeSet split int multiple files. The current tool hardcodes a max of 1000 nodes (including children) per file. Readers process the files in order (each file has a sequence number in it) and can easily construct a single NodeSet before processing if that is easier for them.
+### Archive Format (TAR.GZ)
+
+The archive format contains a single NodeSet split into multiple files. The default maximum is 1000 nodes (including children) per file. Readers process the files in order (each file has a sequence number in it) and can construct a single NodeSet before processing if that is easier.
 
 TAR/GZIP are used since they are platform independent and defined by RFCs.
 
-The tool has a compare command which is needed for testing. It does a node-by-node check to make sure two NodeSets are identical. It is not sensitive to the order the Nodes appear in the file.
+## Prerequisites
 
-### Command Line
-#### Commands
-An tool to convert NodeSets between XML, JSON and GZIP forms.
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
 
-Usage: NodeSetTool [command] [options]
+## Building
 
-Options:
+```bash
+dotnet build
+```
 
-|||
-|--|--|
-|-?\|-h\|--help|Show help information.|
+Or use the build script to produce NuGet packages:
 
-Commands:
+```powershell
+.\build.ps1 -Configuration Release
+```
 
-|||
-|--|--|
-|compare|Compares two NodeSets.|
-|convert|Converts a NodeSet from one format to another.|
+Packages are output to `./build/nupkg/`.
 
-#### Convert
+## Installation
+
+Install as a global .NET tool from a local build:
+
+```bash
+dotnet tool install --global --add-source ./build/nupkg Opc.Ua.NodeSetTool
+```
+
+Or from NuGet (when published):
+
+```bash
+dotnet tool install --global Opc.Ua.NodeSetTool
+```
+
+## Usage
+
+### Convert
+
 Converts a NodeSet from one format to another.
 
-Usage: NodeSetTool convert [options]
+```
+ua-nodeset-tool convert [options]
+```
 
-Options:
+| Option | Description |
+|--------|-------------|
+| `--in` | Input file path. Format is auto-detected from extension or content. |
+| `--out` | Output file path. Defaults to the input filename with the new extension. |
+| `--type` | Output format: `json`, `xml`, or `tar.gz`. |
+| `--max` | Maximum nodes per file in TAR.GZ archives (default: 1000, minimum: 100). |
 
-|||
-|--|--|
-|-?\|-h\|--help|Show help information.|
-|--in|The input file path.|
-|--out|The output file path.|
-|--type|The output file type (json \| xml \| tar.gz).|
+**Examples:**
 
-#### Compare
-Compares two NodeSets.
+```bash
+# XML to JSON
+ua-nodeset-tool convert --in MyModel.NodeSet2.xml --type json
 
-Usage: NodeSetTool compare [options]
+# JSON to XML
+ua-nodeset-tool convert --in MyModel.NodeSet2.json --type xml
 
-Options:
+# XML to TAR.GZ archive with 500 nodes per file
+ua-nodeset-tool convert --in MyModel.NodeSet2.xml --type tar.gz --max 500
+```
 
-|||
-|--|--|
-|-?\|-h\|--help|Show help information.|
-|--in|The input file path.|
-|--target|The comparison target file path.|
+### Compare
+
+Compares two NodeSets to verify they are semantically identical. The comparison is node-by-node and is not sensitive to the order Nodes appear in the files.
+
+```
+ua-nodeset-tool compare [options]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--in` | The input file path. |
+| `--target` | The comparison target file path. |
+
+**Example:**
+
+```bash
+ua-nodeset-tool compare --in original.xml --target converted.xml
+```
+
+## Using the Library
+
+Reference the `Opc.Ua.JsonNodeSet` package in your project to convert NodeSets programmatically:
+
+```csharp
+using Opc.Ua.JsonNodeSet;
+
+// Load from any supported format (auto-detected)
+var nodeSet = NodeSetSerializer.Load("MyModel.NodeSet2.xml");
+
+// Save to JSON
+NodeSetSerializer.SaveJson(nodeSet, "MyModel.NodeSet2.json");
+
+// Save to XML
+NodeSetSerializer.SaveXml(nodeSet, "MyModel.NodeSet2.xml");
+
+// Save to TAR.GZ archive
+NodeSetSerializer.SaveArchive(nodeSet, "MyModel.NodeSet2.tar.gz", maxNodesPerFile: 1000);
+```
+
+## Running Tests
+
+```bash
+dotnet test
+```
+
+## Examples
+
+The `examples/` directory contains sample NodeSet files in all three formats:
+
+- `DemoModel.NodeSet2.xml` / `.json` / `.tar.gz`
+- `Opc.Ua.NodeSet2.Services.xml` / `.json` / `.tar.gz`
+
+## License
+
+MIT

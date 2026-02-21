@@ -56,7 +56,7 @@ namespace NodeSetTool
 
                 var directory = Path.GetDirectoryName(outputFilePath);
 
-                if (!Directory.Exists(directory))
+                if (!String.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
                 }
