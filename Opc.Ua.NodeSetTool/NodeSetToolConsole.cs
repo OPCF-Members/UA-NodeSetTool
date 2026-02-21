@@ -1,108 +1,83 @@
-﻿using McMaster.Extensions.CommandLineUtils;
+using System.CommandLine;
+using Microsoft.Extensions.Logging;
 
 namespace NodeSetTool
 {
     static class NodeSetToolConsole
     {
-        public static void Run(string[] args)
-        {
-            var app = new CommandLineApplication();
-            app.Name = "NodeSetTool";
-            app.Description = "An tool to convert NodeSets between XML, JSON and GZIP forms.";
-            app.HelpOption("-?|-h|--help");
-
-            app.Command("convert", (e) => Convert(e));
-            app.Command("compare", (e) => Compare(e));
-
-            app.OnExecute(() =>
-            {
-                app.ShowHelp();
-                return 0;
-            });
-
-            app.Execute(args);
-        }
-
         const string JsonFile = "json";
         const string XmlFile = "xml";
         const string ArchiveFile = "tar.gz";
 
-        private static void Convert(CommandLineApplication app)
+        static ILogger _logger;
+
+        public static void Run(string[] args, ILogger logger)
         {
-            app.Description = "Converts a NodeSet from one format to another.";
-            app.HelpOption("-?|-h|--help");
+            _logger = logger;
 
-            app.Option(
-                $"--{OptionsNames.InputFilePath}",
-                "The input file path.",
-                CommandOptionType.SingleValue);
+            var rootCommand = new RootCommand("A tool to convert NodeSets between XML, JSON and GZIP forms.");
 
-            app.Option(
-                $"--{OptionsNames.OutputFilePath}",
-                "The output file path.",
-                CommandOptionType.SingleValue);
+            rootCommand.AddCommand(BuildConvertCommand());
+            rootCommand.AddCommand(BuildCompareCommand());
 
-            app.Option(
-                $"--{OptionsNames.OutputFileType}",
-                $"The output file type ({JsonFile} | {XmlFile} | {ArchiveFile})",
-                CommandOptionType.SingleValue);
+            rootCommand.Invoke(args);
+        }
 
-            app.Option(
-                $"--{OptionsNames.MaxFileSize}",
-                $"The maximum number of nodes in a file with an archive ({ArchiveFile} only).",
-                CommandOptionType.SingleValue);
+        private static Command BuildConvertCommand()
+        {
+            var inputOption = new Option<string>("--in", "The input file path.");
+            var outputOption = new Option<string>("--out", "The output file path.");
+            var typeOption = new Option<string>("--type", $"The output file type ({JsonFile} | {XmlFile} | {ArchiveFile}).");
+            var maxOption = new Option<int>("--max", () => 1000, $"The maximum number of nodes in a file within an archive ({ArchiveFile} only).");
 
-            app.OnExecuteAsync((token) =>
+            var command = new Command("convert", "Converts a NodeSet from one format to another.");
+            command.AddOption(inputOption);
+            command.AddOption(outputOption);
+            command.AddOption(typeOption);
+            command.AddOption(maxOption);
+
+            command.SetHandler((inputFilePath, outputFilePath, outputFileType, maxFileSize) =>
             {
-                var options = new OptionValues()
-                {
-                    InputFilePath = app.GetOption(OptionsNames.InputFilePath, null),
-                    OutputFilePath = app.GetOption(OptionsNames.OutputFilePath, null),
-                    OutputFileType = app.GetOption(OptionsNames.OutputFileType, null),
-                    MaxFileSize = app.GetOption(OptionsNames.MaxFileSize, 1000)
-                };
+                _logger.LogInformation("");
+                _logger.LogInformation("--------------------------------------------------------");
+                _logger.LogInformation("Converting NodeSet '{InputFile}' to '{OutputFile}'.", Path.GetFileName(inputFilePath), Path.GetFileName(outputFilePath));
+                _logger.LogInformation("--------------------------------------------------------");
 
-                Log.Info("");
-                Log.Info("--------------------------------------------------------");
-                Log.Info($"Converting NodeSet '{Path.GetFileName(options.InputFilePath)}' to' {Path.GetFileName(options.OutputFilePath)}'.");
-                Log.Info("--------------------------------------------------------");
-
-                if (!File.Exists(options.InputFilePath))
+                if (!File.Exists(inputFilePath))
                 {
-                    Log.Error($"File '{options.InputFilePath}' does not exist.");
+                    _logger.LogError("File '{FilePath}' does not exist.", inputFilePath);
                     Environment.Exit(1);
                 }
 
-                if (String.IsNullOrEmpty(options.OutputFilePath))
+                if (String.IsNullOrEmpty(outputFilePath))
                 {
-                    options.OutputFilePath = options.InputFilePath;
-                    options.OutputFilePath = Path.ChangeExtension(options.OutputFilePath, options.OutputFileType);
+                    outputFilePath = Path.ChangeExtension(inputFilePath, outputFileType);
                 }
 
-                var directory = Path.GetDirectoryName(options.OutputFilePath);
+                var directory = Path.GetDirectoryName(outputFilePath);
 
                 if (!Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
                 }
 
-                if (String.IsNullOrWhiteSpace(options.OutputFileType))
+                if (String.IsNullOrWhiteSpace(outputFileType))
                 {
-                    Log.Error($"No output file type was provided (choose: {JsonFile} | {XmlFile} | {ArchiveFile}).");
+                    _logger.LogError("No output file type was provided (choose: {JsonFile} | {XmlFile} | {ArchiveFile}).", JsonFile, XmlFile, ArchiveFile);
                     Environment.Exit(1);
                 }
 
-                options.OutputFileType = options.OutputFileType.ToLower();
+                outputFileType = outputFileType.ToLower();
 
-                switch (options.OutputFileType)
+                switch (outputFileType)
                 {
                     case JsonFile:
                     case XmlFile:
                     case ArchiveFile:
                     {
-                        if (options.InputFilePath.EndsWith("." + options.OutputFileType))
+                        if (inputFilePath.EndsWith("." + outputFileType))
                         {
-                            Log.Error($"Output file type must be different from the input file type.");
+                            _logger.LogError("Output file type must be different from the input file type.");
                             Environment.Exit(1);
                         }
 
@@ -111,7 +86,7 @@ namespace NodeSetTool
 
                     default:
                     {
-                        Log.Error($"Output file type not supported (choose: {JsonFile} | {XmlFile} | {ArchiveFile}).");
+                        _logger.LogError("Output file type not supported (choose: {JsonFile} | {XmlFile} | {ArchiveFile}).", JsonFile, XmlFile, ArchiveFile);
                         Environment.Exit(1);
                         break;
                     }
@@ -120,78 +95,67 @@ namespace NodeSetTool
                 try
                 {
                     var serializer = new NodeSetSerializer();
-                    serializer.Load(options.InputFilePath);
+                    serializer.Load(inputFilePath);
 
-                    switch (options.OutputFileType)
+                    switch (outputFileType)
                     {
                         case XmlFile:
                         {
-                            serializer.SaveXml(options.OutputFilePath);
+                            serializer.SaveXml(outputFilePath);
                             break;
                         }
 
                         case JsonFile:
                         {
-                            serializer.SaveJson(options.OutputFilePath);
+                            serializer.SaveJson(outputFilePath);
                             break;
                         }
 
                         case ArchiveFile:
                         {
-                            serializer.SaveArchive(options.OutputFilePath, Math.Max(options.MaxFileSize, 100));
+                            serializer.SaveArchive(outputFilePath, Math.Max(maxFileSize, 100));
                             break;
                         }
                     }
 
-                    Log.Info($"The file converted successfully!");
+                    _logger.LogInformation("The file converted successfully!");
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"Conversion failed. ([{e.GetType().Name}] {e.Message})");
+                    _logger.LogError("Conversion failed. ([{ExceptionType}] {Message})", e.GetType().Name, e.Message);
                     Environment.Exit(1);
                 }
+            },
+            inputOption, outputOption, typeOption, maxOption);
 
-                return Task.CompletedTask;
-            });
+            return command;
         }
 
-        private static void Compare(CommandLineApplication app)
+        private static Command BuildCompareCommand()
         {
-            app.Description = "Compares two NodeSets.";
-            app.HelpOption("-?|-h|--help");
+            var inputOption = new Option<string>("--in", "The input file path.");
+            var targetOption = new Option<string>("--target", "The comparison target file path.");
 
-            app.Option(
-                $"--{OptionsNames.InputFilePath}",
-                "The input file path.",
-                CommandOptionType.SingleValue);
+            var command = new Command("compare", "Compares two NodeSets.");
+            command.AddOption(inputOption);
+            command.AddOption(targetOption);
 
-            app.Option(
-                $"--{OptionsNames.CompareFilePath}",
-                "The comparison target file path.",
-                CommandOptionType.SingleValue);
-
-            app.OnExecuteAsync((token) =>
+            command.SetHandler((inputFilePath, compareFilePath) =>
             {
-                var options = new OptionValues()
-                {
-                    InputFilePath = app.GetOption(OptionsNames.InputFilePath, null),
-                    CompareFilePath = app.GetOption(OptionsNames.CompareFilePath, null)
-                };
+                _logger.LogInformation("");
+                _logger.LogInformation("--------------------------------------------------------");
+                _logger.LogInformation("Comparing NodeSet '{InputFile}' to '{CompareFile}'.", Path.GetFileName(inputFilePath), Path.GetFileName(compareFilePath));
+                _logger.LogInformation("--------------------------------------------------------");
 
-                Log.Info("");
-                Log.Info("--------------------------------------------------------");
-                Log.Info($"Comparing NodeSet '{Path.GetFileName(options.InputFilePath)}' to' {Path.GetFileName(options.CompareFilePath)}'.");
-                Log.Info("--------------------------------------------------------");
-
-                if (!File.Exists(options.InputFilePath))
+                if (!File.Exists(inputFilePath))
                 {
-                    Log.Error($"File '{options.InputFilePath}' does not exist.");
+                    _logger.LogError("File '{FilePath}' does not exist.", inputFilePath);
                     Environment.Exit(1);
                 }
 
-                if (!File.Exists(options.CompareFilePath))
+                if (!File.Exists(compareFilePath))
                 {
-                    Log.Error($"File '{options.CompareFilePath}' does not exist.");
+                    _logger.LogError("File '{FilePath}' does not exist.", compareFilePath);
                     Environment.Exit(1);
                 }
 
@@ -200,64 +164,47 @@ namespace NodeSetTool
 
                 try
                 {
-                    serializer1.Load(options.InputFilePath);
+                    serializer1.Load(inputFilePath);
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"File '{options.InputFilePath}' could not be loaded. ([{e.GetType().Name}] {e.Message})");
+                    _logger.LogError("File '{FilePath}' could not be loaded. ([{ExceptionType}] {Message})", inputFilePath, e.GetType().Name, e.Message);
                     Environment.Exit(1);
                 }
 
                 try
                 {
-                    serializer2.Load(options.CompareFilePath);
+                    serializer2.Load(compareFilePath);
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"File '{options.CompareFilePath}' could not be loaded. ([{e.GetType().Name}] {e.Message})");
+                    _logger.LogError("File '{FilePath}' could not be loaded. ([{ExceptionType}] {Message})", compareFilePath, e.GetType().Name, e.Message);
                     Environment.Exit(1);
                 }
 
                 if (serializer1.Compare(serializer2))
                 {
-                    Log.Info($"The two files are the same!");
-                    return Task.CompletedTask;
+                    _logger.LogInformation("The two files are the same!");
+                    return;
                 }
 
-                Log.Warning($"The two files are different!");
+                _logger.LogWarning("The two files are different!");
 
                 foreach (var error in serializer1.CompareErrors)
                 {
                     if (error.Original is ValueType || error.Original is string)
                     {
-                        Log.Warning($">>> Node={error.Node?.BrowseName} [{error.Node?.NodeId}], Message='{error.Message}' [{error.Original} != {error.Target}].");
+                        _logger.LogWarning(">>> Node={BrowseName} [{NodeId}], Message='{ErrorMessage}' [{Original} != {Target}].", error.Node?.BrowseName, error.Node?.NodeId, error.Message, error.Original, error.Target);
                     }
                     else
                     {
-                        Log.Warning($">>> Node={error.Node?.BrowseName} [{error.Node?.NodeId}], Message='{error.Message}'.");
+                        _logger.LogWarning(">>> Node={BrowseName} [{NodeId}], Message='{ErrorMessage}'.", error.Node?.BrowseName, error.Node?.NodeId, error.Message);
                     }
                 }
+            },
+            inputOption, targetOption);
 
-                return Task.CompletedTask;
-            });
-        }
-
-        private static class OptionsNames
-        {
-            public const string InputFilePath = "in";
-            public const string OutputFilePath = "out";
-            public const string OutputFileType = "type";
-            public const string CompareFilePath = "target";
-            public const string MaxFileSize = "max";
-        }
-
-        private class OptionValues
-        {
-            public string InputFilePath;
-            public string OutputFilePath;
-            public string OutputFileType;
-            public string CompareFilePath;
-            public int MaxFileSize;
+            return command;
         }
     }
 }

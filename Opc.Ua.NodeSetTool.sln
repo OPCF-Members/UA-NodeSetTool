@@ -5,7 +5,9 @@ VisualStudioVersion = 17.12.35728.132 d17.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Opc.Ua.NodeSetTool", "Opc.Ua.NodeSetTool\Opc.Ua.NodeSetTool.csproj", "{5A26D688-1E21-4DB5-8624-73991CD88284}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Opc.Ua.JsonNodeSet", "Opc.Ua.JsonNodeSet\src\Opc.Ua.JsonNodeSet\Opc.Ua.JsonNodeSet.csproj", "{19CBB76D-E912-4BF1-A33F-E84C43E7EA67}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Opc.Ua.JsonNodeSet", "Opc.Ua.JsonNodeSet\Opc.Ua.JsonNodeSet.csproj", "{19CBB76D-E912-4BF1-A33F-E84C43E7EA67}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Opc.Ua.NodeSetTool.Tests", "Opc.Ua.NodeSetTool.Tests\Opc.Ua.NodeSetTool.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{19CBB76D-E912-4BF1-A33F-E84C43E7EA67}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{19CBB76D-E912-4BF1-A33F-E84C43E7EA67}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19CBB76D-E912-4BF1-A33F-E84C43E7EA67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

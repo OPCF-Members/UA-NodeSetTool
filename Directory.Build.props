@@ -1,0 +1,23 @@
+<Project>
+
+  <!-- Ensure SolutionDir is set even when building/packing individual projects -->
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'Opc.Ua.NodeSetTool.sln'))\</SolutionDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>OPC Foundation</Authors>
+    <Company>OPC Foundation</Company>
+    <Copyright>Copyright © OPC Foundation</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/OPCFoundation/UA-NodeSetTool</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/OPCFoundation/UA-NodeSetTool</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!-- Assembly signing via environment variable set by signing-key.ps1 -->
+  <PropertyGroup Condition="'$(SignAssembly)' == 'true' And '$(AssemblyOriginatorKeyFile)' != ''">
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+
+</Project>

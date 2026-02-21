@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,16 +7,32 @@
     <Nullable>disable</Nullable>
     <AssemblyName>Opc.Ua.NodeSetTool</AssemblyName>
     <RootNamespace>NodeSetTool</RootNamespace>
-    <VersionSuffix>1.0.$([System.DateTime]::UtcNow.ToString(yyMM)).$([System.DateTime]::UtcNow.ToString(ddmm))</VersionSuffix>
-    <AssemblyVersion Condition=" '$(VersionSuffix)' == '' ">0.0.0.1</AssemblyVersion>
-    <AssemblyVersion Condition=" '$(VersionSuffix)' != '' ">$(VersionSuffix)</AssemblyVersion>
-    <Version Condition=" '$(VersionSuffix)' == '' ">0.0.1.0</Version>
-    <Version Condition=" '$(VersionSuffix)' != '' ">$(VersionSuffix)</Version>
-    <Copyright>Copyright © OPC Foundation</Copyright>
     <Product>OPC UA NodeSet Tool</Product>
+    <DefaultItemExcludes>$(DefaultItemExcludes);build\**</DefaultItemExcludes>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(MSBuildProjectName)\$(Configuration)\</IntermediateOutputPath>
-    <PackAsTool>True</PackAsTool>
   </PropertyGroup>
+
+  <!-- dotnet tool packaging -->
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ua-nodeset-tool</ToolCommandName>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata -->
+  <PropertyGroup>
+    <PackageId>Opc.Ua.NodeSetTool</PackageId>
+    <Description>A dotnet tool to convert OPC UA NodeSets between XML, JSON, and compressed archive formats.</Description>
+    <PackageTags>OPC-UA;NodeSet;JSON;XML;dotnet-tool</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="BaseCommandProcessor.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Opc.Ua.NodeSetTool.Tests" />
+  </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <OutputPath>$(SolutionDir)build\bin\$(MSBuildProjectName)\$(Configuration)\</OutputPath>
@@ -29,16 +45,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\README.md')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
-    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Core" Version="1.5.376.213" />
-    <PackageReference Include="SharpCompress" Version="0.39.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
     <PackageReference Include="System.Formats.Asn1" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Opc.Ua.JsonNodeSet\src\Opc.Ua.JsonNodeSet\Opc.Ua.JsonNodeSet.csproj" />
+    <ProjectReference Include="..\Opc.Ua.JsonNodeSet\Opc.Ua.JsonNodeSet.csproj" />
   </ItemGroup>
 
 </Project>

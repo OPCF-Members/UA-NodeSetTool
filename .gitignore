@@ -287,3 +287,13 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 /out
+/build
+
+# Secrets
+*.secret.*
+
+# Build output
+build_output.txt
+
+# Claude Code
+.claude/

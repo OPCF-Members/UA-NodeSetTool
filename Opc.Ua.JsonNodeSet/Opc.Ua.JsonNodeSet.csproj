@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Opc.Ua.JsonNodeSet</RootNamespace>
+    <AssemblyName>Opc.Ua.JsonNodeSet</AssemblyName>
+    <Product>OPC UA JSON NodeSet Library</Product>
+    <DefaultItemExcludes>$(DefaultItemExcludes);build\**</DefaultItemExcludes>
+    <IntermediateOutputPath>$(SolutionDir)build\obj\$(MSBuildProjectName)\$(Configuration)\</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata -->
+  <PropertyGroup>
+    <PackageId>Opc.Ua.JsonNodeSet</PackageId>
+    <Description>Library for reading, writing, and converting OPC UA NodeSets between XML, JSON, and compressed archive formats.</Description>
+    <PackageTags>OPC-UA;NodeSet;JSON;XML</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>$(SolutionDir)build\bin\$(MSBuildProjectName)\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>$(SolutionDir)build\bin\$(MSBuildProjectName)\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\README.md')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
+  </ItemGroup>
+
+</Project>

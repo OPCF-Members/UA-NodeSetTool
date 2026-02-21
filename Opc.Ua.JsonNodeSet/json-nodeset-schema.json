@@ -1,0 +1,605 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opcfoundation.org/schemas/json-nodeset/1.0.0/json-nodeset-schema.json",
+  "title": "OPC UA NodeSet",
+  "description": "Schema for OPC UA NodeSet in JSON format. Supports lossless conversion between JSON and XML UANodeSet formats.",
+  "contact": {
+    "email": "office@opcfoundation.org"
+  },
+  "license": {
+    "name": "MIT",
+    "url": "https://opcfoundation.org/license/mit.html"
+  },
+  "$ref": "#/$defs/UANodeSet",
+  "$defs": {
+    "UANodeSet": {
+      "type": "object",
+      "properties": {
+        "Models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ModelDefinition"
+          }
+        },
+        "FileSet": {
+          "$ref": "#/$defs/FileSetInfo"
+        },
+        "Nodes": {
+          "type": "object",
+          "properties": {
+            "N1ReferenceTypes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UAReferenceType"
+              }
+            },
+            "N2DataTypes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UADataType"
+              }
+            },
+            "N3VariableTypes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UAVariableType"
+              }
+            },
+            "N4ObjectTypes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UAObjectType"
+              }
+            },
+            "N5Variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UAVariable"
+              }
+            },
+            "N6Methods": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UAMethod"
+              }
+            },
+            "N7Objects": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UAObject"
+              }
+            },
+            "N8Views": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UAView"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ModelReference": {
+      "type": "object",
+      "properties": {
+        "ModelUri": {
+          "type": "string"
+        },
+        "XmlSchemaUri": {
+          "type": "string"
+        },
+        "PublicationDate": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "Version": {
+          "type": "string"
+        },
+        "ModelVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "ModelDefinition": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/ModelReference"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "DefaultAccessRestrictions": {
+              "type": ["integer", "null"],
+              "format": "int64",
+              "minimum": 0,
+              "maximum": 4294967296
+            },
+            "DefaultRolePermissions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RolePermission"
+              }
+            },
+            "RequiredModels": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ModelReference"
+              }
+            },
+            "IsPartial": {
+              "type": ["boolean", "null"]
+            }
+          }
+        }
+      ]
+    },
+    "FileSetInfo": {
+      "type": "object",
+      "properties": {
+        "Current": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "Last": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      }
+    },
+    "UANode": {
+      "description": "Base type for all OPC UA nodes. Concrete node types are distinguished by the NodeClass property: 1=UAObject, 2=UAVariable, 4=UAMethod, 8=UAObjectType, 16=UAVariableType, 32=UAReferenceType, 64=UADataType, 128=UAView.",
+      "type": "object",
+      "properties": {
+        "NodeId": {
+          "type": "string"
+        },
+        "NodeClass": {
+          "$ref": "#/$defs/NodeClass"
+        },
+        "SymbolicName": {
+          "type": "string"
+        },
+        "BrowseName": {
+          "type": "string"
+        },
+        "DisplayName": {
+          "$ref": "#/$defs/LocalizedText"
+        },
+        "Description": {
+          "$ref": "#/$defs/LocalizedText"
+        },
+        "WriteMask": {
+          "type": ["integer", "null"],
+          "format": "int64",
+          "minimum": 0,
+          "maximum": 4294967296
+        },
+        "Documentation": {
+          "type": "string"
+        },
+        "ReleaseStatus": {
+          "oneOf": [
+            { "$ref": "#/$defs/ReleaseStatus" },
+            { "type": "null" }
+          ]
+        },
+        "ParentId": {
+          "type": "string"
+        },
+        "TypeId": {
+          "type": "string"
+        },
+        "ModellingRuleId": {
+          "type": "string"
+        },
+        "DesignToolOnly": {
+          "type": ["boolean", "null"]
+        },
+        "IsAbstract": {
+          "type": ["boolean", "null"]
+        },
+        "RolePermissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RolePermission"
+          }
+        },
+        "AccessRestrictions": {
+          "type": ["integer", "null"],
+          "format": "int64",
+          "minimum": 0,
+          "maximum": 4294967296
+        },
+        "HasNoPermissions": {
+          "type": ["boolean", "null"]
+        },
+        "Children": {
+          "$ref": "#/$defs/ChildList"
+        },
+        "References": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Reference"
+          }
+        },
+        "ConformationUnits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ChildList": {
+      "type": "object",
+      "properties": {
+        "Objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UAObject"
+          }
+        },
+        "Variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UAVariable"
+          }
+        },
+        "Methods": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UAMethod"
+          }
+        }
+      }
+    },
+    "ReleaseStatus": {
+      "enum": [
+        "Released",
+        "Draft",
+        "Deprecated"
+      ],
+      "type": "string"
+    },
+    "NodeClass": {
+      "enum": [0, 1, 2, 4, 8, 16, 32, 64, 128],
+      "x-enum-varnames": [
+        "Unspecified",
+        "UAObject",
+        "UAVariable",
+        "UAMethod",
+        "UAObjectType",
+        "UAVariableType",
+        "UAReferenceType",
+        "UADataType",
+        "UAView"
+      ],
+      "type": "integer"
+    },
+    "LocalizedText": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "r": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "Reference": {
+      "type": "object",
+      "properties": {
+        "ReferenceTypeId": {
+          "type": "string"
+        },
+        "IsForward": {
+          "type": ["boolean", "null"]
+        },
+        "TargetId": {
+          "type": "string"
+        }
+      }
+    },
+    "RolePermission": {
+      "type": "object",
+      "properties": {
+        "RoleId": {
+          "type": "string"
+        },
+        "Permissions": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 0,
+          "maximum": 4294967296
+        }
+      }
+    },
+    "UAObject": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "EventNotifier": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 255
+            }
+          }
+        }
+      ]
+    },
+    "UAVariable": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Value": {
+              "$ref": "#/$defs/Variant"
+            },
+            "DataType": {
+              "type": "string"
+            },
+            "ValueRank": {
+              "type": ["integer", "null"],
+              "format": "int32",
+              "default": -1
+            },
+            "ArrayDimensions": {
+              "type": "string"
+            },
+            "AccessLevel": {
+              "type": ["integer", "null"],
+              "format": "int64",
+              "minimum": 0,
+              "maximum": 4294967296
+            },
+            "MinimumSamplingInterval": {
+              "type": ["number", "null"]
+            },
+            "Historizing": {
+              "type": ["boolean", "null"]
+            }
+          }
+        }
+      ]
+    },
+    "Variant": {
+      "type": "object",
+      "properties": {
+        "UaType": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "Value": {},
+        "Dimensions": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "UAMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Executable": {
+              "type": ["boolean", "null"]
+            },
+            "MethodDeclarationId": {
+              "type": "string"
+            },
+            "Arguments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ArgumentDescription"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ArgumentDescription": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "DisplayName": {
+          "$ref": "#/$defs/LocalizedText"
+        }
+      }
+    },
+    "UAView": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "EventNotifier": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 255
+            },
+            "ContainsNoLoops": {
+              "type": ["boolean", "null"]
+            }
+          }
+        }
+      ]
+    },
+    "UAObjectType": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "UAVariableType": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Value": {
+              "$ref": "#/$defs/Variant"
+            },
+            "DataType": {
+              "type": "string"
+            },
+            "ValueRank": {
+              "type": ["integer", "null"],
+              "format": "int32",
+              "default": -1
+            },
+            "ArrayDimensions": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "UADataType": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Definition": {
+              "$ref": "#/$defs/DataTypeDefinition"
+            },
+            "Purpose": {
+              "$ref": "#/$defs/DataTypePurpose"
+            }
+          }
+        }
+      ]
+    },
+    "DataTypePurpose": {
+      "enum": [
+        "Normal",
+        "ServicesOnly",
+        "CodeGenerator"
+      ],
+      "type": "string"
+    },
+    "DataTypeDefinition": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "SymbolicName": {
+          "type": "string"
+        },
+        "IsUnion": {
+          "type": ["boolean", "null"]
+        },
+        "IsOptionSet": {
+          "type": ["boolean", "null"]
+        },
+        "Fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DataTypeField"
+          }
+        }
+      }
+    },
+    "DataTypeField": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "SymbolicName": {
+          "type": "string"
+        },
+        "Value": {
+          "type": ["integer", "null"]
+        },
+        "DataType": {
+          "type": "string"
+        },
+        "ValueRank": {
+          "type": ["integer", "null"],
+          "format": "int32"
+        },
+        "ArrayDimensions": {
+          "type": "string"
+        },
+        "MaxStringLength": {
+          "type": ["integer", "null"]
+        },
+        "IsOptional": {
+          "type": ["boolean", "null"]
+        },
+        "AllowSubTypes": {
+          "type": ["boolean", "null"]
+        },
+        "DisplayName": {
+          "$ref": "#/$defs/LocalizedText"
+        },
+        "Description": {
+          "$ref": "#/$defs/LocalizedText"
+        }
+      }
+    },
+    "UAReferenceType": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/UANode"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Symmetric": {
+              "type": ["boolean", "null"]
+            },
+            "InverseName": {
+              "$ref": "#/$defs/LocalizedText"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
