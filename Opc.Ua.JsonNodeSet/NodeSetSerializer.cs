@@ -1,6 +1,7 @@
 ﻿using Xml = Opc.Ua.Export;
 using Json = Opc.Ua.JsonNodeSet.Model;
 using Opc.Ua;
+using Opc.Ua.JsonNodeSet;
 using System.Xml;
 using Newtonsoft.Json;
 using System.IO.Compression;
@@ -1983,6 +1984,69 @@ namespace NodeSetTool
             output.Field = fields.ToArray();
 
             return output;
+        }
+
+        public void LoadInto(AddressSpace addressSpace)
+        {
+            addressSpace.AddNodeSet(BuildJson());
+        }
+
+        public static NodeSetSerializer FromAddressSpace(AddressSpace addressSpace, string modelUri)
+        {
+            var serializer = new NodeSetSerializer();
+            var nodeSet = addressSpace.GetNodeSet(modelUri);
+            serializer.LoadFromNodeSet(nodeSet);
+            return serializer;
+        }
+
+        private void LoadFromNodeSet(Json.UANodeSet nodeSet)
+        {
+            m_context = new ServiceMessageContext();
+            LoadWellKnownAliases();
+
+            m_models = new();
+
+            if (nodeSet.Models != null)
+            {
+                foreach (var model in nodeSet.Models)
+                {
+                    m_context.NamespaceUris.GetIndexOrAppend(model.ModelUri!);
+
+                    if (model.RequiredModels != null)
+                    {
+                        foreach (var dep in model.RequiredModels)
+                            m_context.NamespaceUris.GetIndexOrAppend(dep.ModelUri!);
+                    }
+
+                    m_models[model.ModelUri!] = model;
+                }
+            }
+
+            m_nodes = new();
+            m_sequence = new();
+
+            if (nodeSet.Nodes != null)
+            {
+                void IndexList(IEnumerable<Json.UANode>? nodes)
+                {
+                    if (nodes == null) return;
+                    foreach (var node in nodes)
+                    {
+                        m_nodes[node.NodeId!] = node;
+                        m_sequence.Add(node);
+                        IndexChildren(node);
+                    }
+                }
+
+                IndexList(nodeSet.Nodes.N1ReferenceTypes);
+                IndexList(nodeSet.Nodes.N2DataTypes);
+                IndexList(nodeSet.Nodes.N3VariableTypes);
+                IndexList(nodeSet.Nodes.N4ObjectTypes);
+                IndexList(nodeSet.Nodes.N5Variables);
+                IndexList(nodeSet.Nodes.N6Methods);
+                IndexList(nodeSet.Nodes.N7Objects);
+                IndexList(nodeSet.Nodes.N8Views);
+            }
         }
     }
 }
