@@ -61,7 +61,7 @@ namespace NodeSetTool
         }
 
         private static object CreateInstance(Type type)
-        {  
+        {
             var cs = type.GetConstructors()
                 .Where(x => x.GetParameters().Where(y => !y.IsOptional).Count() == 0)
                 .FirstOrDefault();
@@ -140,7 +140,7 @@ namespace NodeSetTool
                 var listType = typeof(List<>).MakeGenericType(elementType);
                 var list = (System.Collections.IList)Activator.CreateInstance(listType);
 
-                int count = 0; 
+                int count = 0;
 
                 while (reader.Read())
                 {

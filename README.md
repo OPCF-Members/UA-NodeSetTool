@@ -1,5 +1,7 @@
 # UA-NodeSetTool
 
+> **This repo is PROTOTYPE code and is not a published specification so the schema WILL change.**
+
 A .NET command-line tool and library for converting OPC UA NodeSets between XML, JSON, and TAR.GZ archive formats.
 
 ## Packages
@@ -14,14 +16,12 @@ A .NET command-line tool and library for converting OPC UA NodeSets between XML,
 | Format | Extension | Description |
 |--------|-----------|-------------|
 | XML | `.xml` | Standard OPC UA NodeSet format ([UANodeSet.xsd](https://github.com/OPCFoundation/UA-Nodeset/blob/latest/Schema/UANodeSet.xsd)) |
-| JSON | `.json` | Compact JSON representation using an [OpenAPI schema](https://github.com/OPCF-Members/UA-ModelCompiler/blob/master/NodeSetTool/json-nodeset-schema.json) |
+| JSON | `.json` | Compact JSON representation using a [JSON schema](https://github.com/OPCF-Members/UA-ModelCompiler/blob/master/NodeSetTool/json-nodeset-schema.json) |
 | TAR.GZ | `.tar.gz` | Compressed archive that splits large NodeSets across multiple JSON files |
 
 ### JSON Format
 
-The JSON format uses the [OpenAPI specification](https://spec.openapis.org/oas/v3.0.3.html) because of the numerous tools available that can process JSON schemas in that form. This means there is an unnecessary HTTP GET service defined. The UANodeSet schema is defined by the body of the GET service response. The schema also uses OpenAPI 3.0.3 since there is less tool support for OpenAPI 3.1 (e.g. it is planned for .NET 10.0).
-
-If useful, a version of the schema that conforms to [JSON schema](https://json-schema.org/) could be published too.
+The JSON format is defined by a [JSON schema](https://json-schema.org/). The schema is available [here](https://github.com/OPCF-Members/UA-ModelCompiler/blob/master/NodeSetTool/json-nodeset-schema.json).
 
 The JSON form is designed to be easier for exception based parsers by ordering the nodes: ReferenceTypes, DataTypes, VariableTypes, ObjectTypes, Variables, Methods, Objects and then Views. That said, perfect ordering is impossible since circular references between Nodes can exist and readers need to handle the possibility. No ordering is imposed on the list of individual types.
 
