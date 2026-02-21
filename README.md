@@ -1,6 +1,6 @@
 # UA-NodeSetTool
 
-> **This repo is PROTOTYPE code and is not a published specification so the schema is subject to change.**
+> **This repo is PROTOTYPE code and is not a published specification so the schema WILL change.**
 
 A .NET command-line tool and library for converting OPC UA NodeSets between XML, JSON, and TAR.GZ archive formats.
 
