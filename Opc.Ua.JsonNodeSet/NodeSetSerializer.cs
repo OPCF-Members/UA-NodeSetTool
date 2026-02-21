@@ -540,7 +540,7 @@ namespace NodeSetTool
                 JsonConvert.DeserializeObject(json);
                 return true;
             }
-            catch (Exception) 
+            catch (Exception)
             {
                 return false;
             }
@@ -1167,7 +1167,7 @@ namespace NodeSetTool
 
             files.Add(current);
             count = 0;
-            
+
             foreach (var file in files)
             {
                 file.FileSet!.Last = files.Count;
