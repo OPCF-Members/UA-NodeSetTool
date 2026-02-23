@@ -553,11 +553,23 @@ namespace NodeSetTool
             Initialize(input);
         }
 
+        public void LoadXml(Stream stream)
+        {
+            var input = Xml.UANodeSet.Read(stream)!;
+            Initialize(input);
+        }
+
         public void SaveXml(string filePath)
         {
             var xml = BuildXml();
             using var ostrm = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite);
             xml.Write(ostrm);
+        }
+
+        public void SaveXml(Stream stream)
+        {
+            var xml = BuildXml();
+            xml.Write(stream);
         }
 
         public void SaveJson(string filePath)
@@ -576,6 +588,22 @@ namespace NodeSetTool
             {
                 serializer.Serialize(writer, nodeset);
             }
+        }
+
+        public void SaveJson(Stream stream)
+        {
+            var serializer = new JsonSerializer
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Newtonsoft.Json.Formatting.Indented,
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+            };
+
+            var nodeset = BuildJson();
+
+            using var writer = new StreamWriter(stream, leaveOpen: true);
+            using var jsonWriter = new JsonTextWriter(writer);
+            serializer.Serialize(jsonWriter, nodeset);
         }
 
         public void LoadJson(string filePath)
@@ -727,6 +755,33 @@ namespace NodeSetTool
             }
         }
 
+        public void SaveArchive(Stream stream, int maxNodesPerFile)
+        {
+            var nodeset = BuildJson();
+            var files = Package(nodeset, maxNodesPerFile);
+
+            using var gzipStream = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true);
+            using var tarWriter = WriterFactory.Open(gzipStream, ArchiveType.Tar, CompressionType.None);
+
+            foreach (var file in files)
+            {
+                var serializer = new JsonSerializer
+                {
+                    Formatting = Newtonsoft.Json.Formatting.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    DefaultValueHandling = DefaultValueHandling.Ignore,
+                };
+
+                using var ms = new MemoryStream();
+                using var sw = new StreamWriter(ms);
+                using var jw = new JsonTextWriter(sw);
+                serializer.Serialize(jw, file);
+                jw.Flush();
+                ms.Seek(0, SeekOrigin.Begin);
+                tarWriter.Write($"UANodeSet_{file.FileSet!.Current:D3}_Of_{file.FileSet.Last:D3}.json", ms, null);
+            }
+        }
+
         private void IndexChildren(Json.UANode parent)
         {
             if (parent == null || parent.Children == null)
@@ -739,7 +794,8 @@ namespace NodeSetTool
                 foreach (var child in parent.Children.Objects)
                 {
                     child.ParentId = parent.NodeId;
-                    m_nodes![child.NodeId!] = child;
+                    if (m_nodes!.ContainsKey(child.NodeId!)) continue; // already indexed via flat list
+                    m_nodes[child.NodeId!] = child;
                     m_sequence!.Add(child);
                     IndexChildren(child);
                 }
@@ -750,7 +806,8 @@ namespace NodeSetTool
                 foreach (var child in parent.Children.Variables)
                 {
                     child.ParentId = parent.NodeId;
-                    m_nodes![child.NodeId!] = child;
+                    if (m_nodes!.ContainsKey(child.NodeId!)) continue;
+                    m_nodes[child.NodeId!] = child;
                     m_sequence!.Add(child);
                     IndexChildren(child);
                 }
@@ -761,7 +818,8 @@ namespace NodeSetTool
                 foreach (var child in parent.Children.Methods)
                 {
                     child.ParentId = parent.NodeId;
-                    m_nodes![child.NodeId!] = child;
+                    if (m_nodes!.ContainsKey(child.NodeId!)) continue;
+                    m_nodes[child.NodeId!] = child;
                     m_sequence!.Add(child);
                     IndexChildren(child);
                 }
@@ -2032,6 +2090,7 @@ namespace NodeSetTool
                     if (nodes == null) return;
                     foreach (var node in nodes)
                     {
+                        if (m_nodes.ContainsKey(node.NodeId!)) continue; // already indexed via parent's Children
                         m_nodes[node.NodeId!] = node;
                         m_sequence.Add(node);
                         IndexChildren(node);
@@ -2046,6 +2105,49 @@ namespace NodeSetTool
                 IndexList(nodeSet.Nodes.N6Methods);
                 IndexList(nodeSet.Nodes.N7Objects);
                 IndexList(nodeSet.Nodes.N8Views);
+            }
+
+            // Discover and register any namespace URIs referenced by nodes that
+            // are not already in the context (e.g. cross-model TypeDefinition refs).
+            foreach (var node in m_sequence!)
+            {
+                RegisterNsuUri(node.NodeId);
+                RegisterNsuUri(node.BrowseName);
+                RegisterNsuUri(node.ParentId);
+                RegisterNsuUri(node.TypeId);
+                RegisterNsuUri(node.ModellingRuleId);
+
+                if (node is Json.UAVariable v)
+                    RegisterNsuUri(v.DataType);
+                if (node is Json.UAVariableType vt)
+                    RegisterNsuUri(vt.DataType);
+                if (node is Json.UADataType dt && dt.Definition?.Fields != null)
+                {
+                    foreach (var field in dt.Definition.Fields)
+                        RegisterNsuUri(field.DataType);
+                }
+
+                if (node.References != null)
+                {
+                    foreach (var r in node.References)
+                    {
+                        RegisterNsuUri(r.ReferenceTypeId);
+                        RegisterNsuUri(r.TargetId);
+                    }
+                }
+            }
+        }
+
+        private void RegisterNsuUri(string? value)
+        {
+            if (value != null && value.StartsWith("nsu="))
+            {
+                var semi = value.IndexOf(';');
+                if (semi > 4)
+                {
+                    var uri = value.Substring(4, semi - 4);
+                    m_context!.NamespaceUris.GetIndexOrAppend(uri);
+                }
             }
         }
     }
