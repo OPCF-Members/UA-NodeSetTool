@@ -1,13 +1,18 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.12.35728.132 d17.12
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11512.155 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Opc.Ua.NodeSetTool", "Opc.Ua.NodeSetTool\Opc.Ua.NodeSetTool.csproj", "{5A26D688-1E21-4DB5-8624-73991CD88284}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Opc.Ua.JsonNodeSet", "Opc.Ua.JsonNodeSet\Opc.Ua.JsonNodeSet.csproj", "{19CBB76D-E912-4BF1-A33F-E84C43E7EA67}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Opc.Ua.NodeSetTool.Tests", "Opc.Ua.NodeSetTool.Tests\Opc.Ua.NodeSetTool.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4440191A-C7EA-4EF8-A4D4-1A0E118CD1AA}"
+	ProjectSection(SolutionItems) = preProject
+		examples\DemoModel.NodeSet2.json = examples\DemoModel.NodeSet2.json
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,5 +35,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {32AA6215-DB48-4DCE-86C8-45DA4C73BC69}
 	EndGlobalSection
 EndGlobal

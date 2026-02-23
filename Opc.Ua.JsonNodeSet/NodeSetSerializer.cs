@@ -4,6 +4,7 @@ using Opc.Ua;
 using Opc.Ua.JsonNodeSet;
 using System.Xml;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.IO.Compression;
 using SharpCompress.Writers;
 using SharpCompress.Common;
@@ -21,6 +22,8 @@ namespace NodeSetTool
         private Dictionary<string, Json.UANode>? m_nodes;
         private List<Json.UANode>? m_sequence;
         private List<CompareError> m_errors = new();
+        private List<Json.UANode>? m_stubs;
+        private Dictionary<string, string>? m_nsPrefixes; // namespace URI → CURIE prefix
 
         public IReadOnlyCollection<Json.ModelDefinition> Models => m_models?.Values ?? (IReadOnlyCollection<Json.ModelDefinition>)Array.Empty<Json.ModelDefinition>();
 
@@ -484,6 +487,11 @@ namespace NodeSetTool
                 LoadXml(filePath);
                 return;
             }
+            else if (filePath.EndsWith(".jsonld"))
+            {
+                LoadJsonLd(filePath);
+                return;
+            }
             else if (filePath.EndsWith(".json"))
             {
                 LoadJson(filePath);
@@ -553,11 +561,23 @@ namespace NodeSetTool
             Initialize(input);
         }
 
+        public void LoadXml(Stream stream)
+        {
+            var input = Xml.UANodeSet.Read(stream)!;
+            Initialize(input);
+        }
+
         public void SaveXml(string filePath)
         {
             var xml = BuildXml();
             using var ostrm = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite);
             xml.Write(ostrm);
+        }
+
+        public void SaveXml(Stream stream)
+        {
+            var xml = BuildXml();
+            xml.Write(stream);
         }
 
         public void SaveJson(string filePath)
@@ -576,6 +596,22 @@ namespace NodeSetTool
             {
                 serializer.Serialize(writer, nodeset);
             }
+        }
+
+        public void SaveJson(Stream stream)
+        {
+            var serializer = new JsonSerializer
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Newtonsoft.Json.Formatting.Indented,
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+            };
+
+            var nodeset = BuildJson();
+
+            using var writer = new StreamWriter(stream, leaveOpen: true);
+            using var jsonWriter = new JsonTextWriter(writer);
+            serializer.Serialize(jsonWriter, nodeset);
         }
 
         public void LoadJson(string filePath)
@@ -727,6 +763,33 @@ namespace NodeSetTool
             }
         }
 
+        public void SaveArchive(Stream stream, int maxNodesPerFile)
+        {
+            var nodeset = BuildJson();
+            var files = Package(nodeset, maxNodesPerFile);
+
+            using var gzipStream = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true);
+            using var tarWriter = WriterFactory.Open(gzipStream, ArchiveType.Tar, CompressionType.None);
+
+            foreach (var file in files)
+            {
+                var serializer = new JsonSerializer
+                {
+                    Formatting = Newtonsoft.Json.Formatting.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    DefaultValueHandling = DefaultValueHandling.Ignore,
+                };
+
+                using var ms = new MemoryStream();
+                using var sw = new StreamWriter(ms);
+                using var jw = new JsonTextWriter(sw);
+                serializer.Serialize(jw, file);
+                jw.Flush();
+                ms.Seek(0, SeekOrigin.Begin);
+                tarWriter.Write($"UANodeSet_{file.FileSet!.Current:D3}_Of_{file.FileSet.Last:D3}.json", ms, null);
+            }
+        }
+
         private void IndexChildren(Json.UANode parent)
         {
             if (parent == null || parent.Children == null)
@@ -739,7 +802,8 @@ namespace NodeSetTool
                 foreach (var child in parent.Children.Objects)
                 {
                     child.ParentId = parent.NodeId;
-                    m_nodes![child.NodeId!] = child;
+                    if (m_nodes!.ContainsKey(child.NodeId!)) continue; // already indexed via flat list
+                    m_nodes[child.NodeId!] = child;
                     m_sequence!.Add(child);
                     IndexChildren(child);
                 }
@@ -750,7 +814,8 @@ namespace NodeSetTool
                 foreach (var child in parent.Children.Variables)
                 {
                     child.ParentId = parent.NodeId;
-                    m_nodes![child.NodeId!] = child;
+                    if (m_nodes!.ContainsKey(child.NodeId!)) continue;
+                    m_nodes[child.NodeId!] = child;
                     m_sequence!.Add(child);
                     IndexChildren(child);
                 }
@@ -761,7 +826,8 @@ namespace NodeSetTool
                 foreach (var child in parent.Children.Methods)
                 {
                     child.ParentId = parent.NodeId;
-                    m_nodes![child.NodeId!] = child;
+                    if (m_nodes!.ContainsKey(child.NodeId!)) continue;
+                    m_nodes[child.NodeId!] = child;
                     m_sequence!.Add(child);
                     IndexChildren(child);
                 }
@@ -1999,6 +2065,15 @@ namespace NodeSetTool
             return serializer;
         }
 
+        public static NodeSetSerializer FromAddressSpaceAsJsonLd(AddressSpace addressSpace, string modelUri)
+        {
+            var serializer = new NodeSetSerializer();
+            var (nodeSet, stubs) = addressSpace.GetNodeSetWithStubs(modelUri);
+            serializer.LoadFromNodeSet(nodeSet);
+            serializer.m_stubs = stubs;
+            return serializer;
+        }
+
         private void LoadFromNodeSet(Json.UANodeSet nodeSet)
         {
             m_context = new ServiceMessageContext();
@@ -2032,6 +2107,7 @@ namespace NodeSetTool
                     if (nodes == null) return;
                     foreach (var node in nodes)
                     {
+                        if (m_nodes.ContainsKey(node.NodeId!)) continue; // already indexed via parent's Children
                         m_nodes[node.NodeId!] = node;
                         m_sequence.Add(node);
                         IndexChildren(node);
@@ -2047,6 +2123,778 @@ namespace NodeSetTool
                 IndexList(nodeSet.Nodes.N7Objects);
                 IndexList(nodeSet.Nodes.N8Views);
             }
+
+            // Discover and register any namespace URIs referenced by nodes that
+            // are not already in the context (e.g. cross-model TypeDefinition refs).
+            foreach (var node in m_sequence!)
+            {
+                RegisterNsuUri(node.NodeId);
+                RegisterNsuUri(node.BrowseName);
+                RegisterNsuUri(node.ParentId);
+                RegisterNsuUri(node.TypeId);
+                RegisterNsuUri(node.ModellingRuleId);
+
+                if (node is Json.UAVariable v)
+                    RegisterNsuUri(v.DataType);
+                if (node is Json.UAVariableType vt)
+                    RegisterNsuUri(vt.DataType);
+                if (node is Json.UADataType dt && dt.Definition?.Fields != null)
+                {
+                    foreach (var field in dt.Definition.Fields)
+                        RegisterNsuUri(field.DataType);
+                }
+
+                if (node.References != null)
+                {
+                    foreach (var r in node.References)
+                    {
+                        RegisterNsuUri(r.ReferenceTypeId);
+                        RegisterNsuUri(r.TargetId);
+                    }
+                }
+            }
         }
+
+        private void RegisterNsuUri(string? value)
+        {
+            if (value != null && value.StartsWith("nsu="))
+            {
+                var semi = value.IndexOf(';');
+                if (semi > 4)
+                {
+                    var uri = value.Substring(4, semi - 4);
+                    m_context!.NamespaceUris.GetIndexOrAppend(uri);
+                }
+            }
+        }
+
+        #region JSON-LD Serialization
+
+        public void SaveJsonLd(string filePath)
+        {
+            using var stream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite);
+            SaveJsonLd(stream);
+        }
+
+        public void SaveJsonLd(Stream stream)
+        {
+            var doc = BuildJsonLd();
+            using var writer = new StreamWriter(stream, leaveOpen: true);
+            using var jsonWriter = new JsonTextWriter(writer) { Formatting = Newtonsoft.Json.Formatting.Indented };
+            doc.WriteTo(jsonWriter);
+        }
+
+        public void LoadJsonLd(string filePath)
+        {
+            var json = File.ReadAllText(filePath);
+            var doc = JObject.Parse(json);
+
+            // Parse @context to build prefix → URI mappings
+            var context = doc["@context"] as JObject;
+            var prefixToUri = new Dictionary<string, string>();
+            if (context != null)
+            {
+                foreach (var prop in context.Properties())
+                {
+                    if (prop.Value.Type == JTokenType.String)
+                    {
+                        var value = prop.Value.ToString();
+                        if (value.Contains("://") || value.StartsWith("urn:"))
+                            prefixToUri[prop.Name] = value;
+                    }
+                }
+            }
+
+            // Parse model metadata
+            var modelDef = new Json.ModelDefinition();
+            modelDef.ModelUri = doc["modelUri"]?.ToString();
+            modelDef.XmlSchemaUri = doc["xmlSchemaUri"]?.ToString();
+            modelDef.VarVersion = doc["version"]?.ToString();
+            modelDef.ModelVersion = doc["modelVersion"]?.ToString();
+
+            var pubDate = doc["publicationDate"]?.ToString();
+            if (pubDate != null && DateTime.TryParse(pubDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+                modelDef.PublicationDate = parsedDate;
+
+            var reqModels = doc["requiredModels"] as JArray;
+            if (reqModels != null)
+            {
+                modelDef.RequiredModels = new List<Json.ModelReference>();
+                foreach (var req in reqModels)
+                {
+                    var reqRef = new Json.ModelReference();
+                    reqRef.ModelUri = req["modelUri"]?.ToString();
+                    reqRef.XmlSchemaUri = req["xmlSchemaUri"]?.ToString();
+                    reqRef.VarVersion = req["version"]?.ToString();
+                    var reqPubDate = req["publicationDate"]?.ToString();
+                    if (reqPubDate != null && DateTime.TryParse(reqPubDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var rpd))
+                        reqRef.PublicationDate = rpd;
+                    modelDef.RequiredModels.Add(reqRef);
+                }
+            }
+
+            // Parse @graph — skip stubs
+            var graph = doc["@graph"] as JArray;
+            var allNodes = new List<Json.UANode>();
+
+            if (graph != null)
+            {
+                foreach (var entry in graph)
+                {
+                    if (entry is not JObject nodeObj) continue;
+                    if (nodeObj["isExternalReference"]?.Value<bool>() == true) continue;
+
+                    var node = JsonLdEntryToNode(nodeObj, prefixToUri);
+                    if (node != null)
+                        allNodes.Add(node);
+                }
+            }
+
+            // Build Children hierarchy from flat list
+            var nodeDict = new Dictionary<string, Json.UANode>();
+            foreach (var n in allNodes)
+                if (n.NodeId != null)
+                    nodeDict[n.NodeId] = n;
+
+            foreach (var n in allNodes)
+            {
+                if (n.ParentId != null && nodeDict.TryGetValue(n.ParentId, out var parent))
+                {
+                    parent.Children ??= new Json.ChildList();
+                    switch (n)
+                    {
+                        case Json.UAObject od: (parent.Children.Objects ??= new()).Add(od); break;
+                        case Json.UAVariable vn: (parent.Children.Variables ??= new()).Add(vn); break;
+                        case Json.UAMethod mn: (parent.Children.Methods ??= new()).Add(mn); break;
+                    }
+                }
+            }
+
+            // Build UANodeSet with only top-level nodes
+            var nodeSet = new Json.UANodeSet();
+            nodeSet.Models = new List<Json.ModelDefinition> { modelDef };
+            nodeSet.Nodes = new Json.UANodeSetNodes();
+
+            foreach (var n in allNodes)
+            {
+                // Skip children — they're nested under their parent
+                if (n.ParentId != null && nodeDict.ContainsKey(n.ParentId))
+                    continue;
+
+                switch (n)
+                {
+                    case Json.UAReferenceType rt: (nodeSet.Nodes.N1ReferenceTypes ??= new()).Add(rt); break;
+                    case Json.UADataType dt: (nodeSet.Nodes.N2DataTypes ??= new()).Add(dt); break;
+                    case Json.UAVariableType vt: (nodeSet.Nodes.N3VariableTypes ??= new()).Add(vt); break;
+                    case Json.UAObjectType ot: (nodeSet.Nodes.N4ObjectTypes ??= new()).Add(ot); break;
+                    case Json.UAVariable vn: (nodeSet.Nodes.N5Variables ??= new()).Add(vn); break;
+                    case Json.UAMethod mn: (nodeSet.Nodes.N6Methods ??= new()).Add(mn); break;
+                    case Json.UAObject on: (nodeSet.Nodes.N7Objects ??= new()).Add(on); break;
+                    case Json.UAView wn: (nodeSet.Nodes.N8Views ??= new()).Add(wn); break;
+                }
+            }
+
+            LoadWellKnownAliases();
+            IndexFile(nodeSet);
+        }
+
+        private JObject BuildJsonLd()
+        {
+            var doc = new JObject();
+            var context = BuildJsonLdContext();
+            doc["@context"] = context;
+
+            var model = m_models!.Values.FirstOrDefault();
+            if (model != null)
+            {
+                doc["@id"] = model.ModelUri;
+                doc["@type"] = "opcua:UANodeSet";
+                doc["modelUri"] = model.ModelUri;
+                if (model.XmlSchemaUri != null) doc["xmlSchemaUri"] = model.XmlSchemaUri;
+                if (model.VarVersion != null) doc["version"] = model.VarVersion;
+                if (model.ModelVersion != null) doc["modelVersion"] = model.ModelVersion;
+                if (model.PublicationDate != null)
+                    doc["publicationDate"] = model.PublicationDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                if (model.RequiredModels != null && model.RequiredModels.Count > 0)
+                {
+                    var reqArray = new JArray();
+                    foreach (var req in model.RequiredModels)
+                    {
+                        var reqObj = new JObject();
+                        reqObj["modelUri"] = req.ModelUri;
+                        if (req.XmlSchemaUri != null) reqObj["xmlSchemaUri"] = req.XmlSchemaUri;
+                        if (req.VarVersion != null) reqObj["version"] = req.VarVersion;
+                        if (req.PublicationDate != null)
+                            reqObj["publicationDate"] = req.PublicationDate.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+                        reqArray.Add(reqObj);
+                    }
+                    doc["requiredModels"] = reqArray;
+                }
+            }
+
+            var graph = new JArray();
+            foreach (var node in m_sequence!)
+                graph.Add(NodeToJsonLd(node, isStub: false));
+
+            if (m_stubs != null)
+                foreach (var stub in m_stubs)
+                    graph.Add(NodeToJsonLd(stub, isStub: true));
+
+            doc["@graph"] = graph;
+            return doc;
+        }
+
+        private JObject BuildJsonLdContext()
+        {
+            m_nsPrefixes = new Dictionary<string, string>();
+            var context = new JObject();
+
+            // Core namespace
+            m_nsPrefixes["http://opcfoundation.org/UA/"] = "opcua";
+            context["opcua"] = "http://opcfoundation.org/UA/";
+
+            // Model namespaces and their required models
+            foreach (var model in m_models!.Values)
+            {
+                RegisterNamespacePrefix(model.ModelUri!, context);
+
+                if (model.RequiredModels != null)
+                    foreach (var req in model.RequiredModels)
+                        if (req.ModelUri != null)
+                            RegisterNamespacePrefix(req.ModelUri, context);
+            }
+
+            context["xsd"] = "http://www.w3.org/2001/XMLSchema#";
+            context["rdfs"] = "http://www.w3.org/2000/01/rdf-schema#";
+
+            // Property mappings
+            context["browseName"] = "opcua:BrowseName";
+            context["symbolicName"] = "opcua:SymbolicName";
+            context["description"] = "rdfs:comment";
+            context["releaseStatus"] = "opcua:ReleaseStatus";
+            context["valueRank"] = new JObject { ["@id"] = "opcua:ValueRank", ["@type"] = "xsd:integer" };
+            context["arrayDimensions"] = "opcua:ArrayDimensions";
+            context["accessRestrictions"] = new JObject { ["@id"] = "opcua:AccessRestrictions", ["@type"] = "xsd:integer" };
+            context["isUnion"] = new JObject { ["@id"] = "opcua:IsUnion", ["@type"] = "xsd:boolean" };
+            context["isOptional"] = new JObject { ["@id"] = "opcua:IsOptional", ["@type"] = "xsd:boolean" };
+            context["allowSubTypes"] = new JObject { ["@id"] = "opcua:AllowSubTypes", ["@type"] = "xsd:boolean" };
+
+            // Implicit reference properties
+            context["dataType"] = new JObject { ["@id"] = "opcua:HasDataType", ["@type"] = "@id" };
+            context["typeDefinition"] = new JObject { ["@id"] = "opcua:HasTypeDefinition", ["@type"] = "@id" };
+            context["parent"] = new JObject { ["@id"] = "opcua:HasParent", ["@type"] = "@id" };
+            context["modellingRule"] = new JObject { ["@id"] = "opcua:HasModellingRule", ["@type"] = "@id" };
+
+            // Forward reference properties
+            context["HasSubtype"] = new JObject { ["@id"] = "opcua:HasSubtype", ["@type"] = "@id" };
+            context["HasProperty"] = new JObject { ["@id"] = "opcua:HasProperty", ["@type"] = "@id" };
+            context["HasComponent"] = new JObject { ["@id"] = "opcua:HasComponent", ["@type"] = "@id" };
+            context["Organizes"] = new JObject { ["@id"] = "opcua:Organizes", ["@type"] = "@id" };
+            context["HasEncoding"] = new JObject { ["@id"] = "opcua:HasEncoding", ["@type"] = "@id" };
+            context["HasDescription"] = new JObject { ["@id"] = "opcua:HasDescription", ["@type"] = "@id" };
+            context["HasOrderedComponent"] = new JObject { ["@id"] = "opcua:HasOrderedComponent", ["@type"] = "@id" };
+
+            // Inverse reference properties
+            context["SubtypeOf"] = new JObject { ["@id"] = "opcua:SubtypeOf", ["@type"] = "@id" };
+            context["PropertyOf"] = new JObject { ["@id"] = "opcua:PropertyOf", ["@type"] = "@id" };
+            context["ComponentOf"] = new JObject { ["@id"] = "opcua:ComponentOf", ["@type"] = "@id" };
+            context["OrganizedBy"] = new JObject { ["@id"] = "opcua:OrganizedBy", ["@type"] = "@id" };
+            context["EncodingOf"] = new JObject { ["@id"] = "opcua:EncodingOf", ["@type"] = "@id" };
+            context["OrderedComponentOf"] = new JObject { ["@id"] = "opcua:OrderedComponentOf", ["@type"] = "@id" };
+
+            // DataType definition
+            context["definition"] = "opcua:HasDefinition";
+            context["fields"] = "opcua:HasField";
+            context["fieldName"] = "opcua:FieldName";
+            context["fieldValue"] = new JObject { ["@id"] = "opcua:FieldValue", ["@type"] = "xsd:integer" };
+            context["fieldDataType"] = new JObject { ["@id"] = "opcua:FieldDataType", ["@type"] = "@id" };
+
+            // Other
+            context["rolePermissions"] = "opcua:RolePermissions";
+            context["roleId"] = new JObject { ["@id"] = "opcua:RoleId", ["@type"] = "@id" };
+            context["permissions"] = new JObject { ["@id"] = "opcua:Permissions", ["@type"] = "xsd:integer" };
+            context["modelUri"] = new JObject { ["@id"] = "opcua:ModelUri", ["@type"] = "@id" };
+            context["version"] = "opcua:Version";
+            context["modelVersion"] = "opcua:ModelVersion";
+            context["publicationDate"] = new JObject { ["@id"] = "opcua:PublicationDate", ["@type"] = "xsd:dateTime" };
+            context["xmlSchemaUri"] = new JObject { ["@id"] = "opcua:XmlSchemaUri", ["@type"] = "@id" };
+            context["requiredModels"] = "opcua:RequiredModels";
+            context["isExternalReference"] = new JObject { ["@id"] = "opcua:IsExternalReference", ["@type"] = "xsd:boolean" };
+            context["references"] = "opcua:References";
+            context["referenceType"] = new JObject { ["@id"] = "opcua:ReferenceType", ["@type"] = "@id" };
+            context["target"] = new JObject { ["@id"] = "opcua:Target", ["@type"] = "@id" };
+
+            return context;
+        }
+
+        private void RegisterNamespacePrefix(string nsUri, JObject context)
+        {
+            if (m_nsPrefixes!.ContainsKey(nsUri)) return;
+            if (nsUri == "http://opcfoundation.org/UA/") return;
+
+            var prefix = DerivePrefix(nsUri);
+            while (m_nsPrefixes.ContainsValue(prefix))
+                prefix += "2";
+
+            m_nsPrefixes[nsUri] = prefix;
+            var contextUri = nsUri;
+            if (!contextUri.EndsWith("/") && !contextUri.EndsWith("#"))
+                contextUri += "/";
+            context[prefix] = contextUri;
+        }
+
+        private static string DerivePrefix(string nsUri)
+        {
+            // Extract last segment from URI
+            var lastSeg = nsUri.TrimEnd('/');
+            int pos = Math.Max(lastSeg.LastIndexOf('/'), Math.Max(lastSeg.LastIndexOf(':'), lastSeg.LastIndexOf('#')));
+            if (pos >= 0 && pos < lastSeg.Length - 1)
+                lastSeg = lastSeg.Substring(pos + 1);
+
+            // Take PascalCase initials
+            var initials = new System.Text.StringBuilder();
+            foreach (char c in lastSeg)
+            {
+                if (char.IsUpper(c))
+                    initials.Append(char.ToLower(c));
+            }
+
+            if (initials.Length >= 2)
+                return initials.ToString();
+
+            return lastSeg.Substring(0, Math.Min(4, lastSeg.Length)).ToLower();
+        }
+
+        private string ToCurie(string? nodeId)
+        {
+            if (string.IsNullOrEmpty(nodeId)) return "";
+
+            if (nodeId.StartsWith("nsu="))
+            {
+                int semi = nodeId.IndexOf(';', 4);
+                if (semi >= 0)
+                {
+                    var nsUri = nodeId.Substring(4, semi - 4);
+                    var idPart = nodeId.Substring(semi + 1);
+
+                    if (m_nsPrefixes != null && m_nsPrefixes.TryGetValue(nsUri, out var prefix))
+                        return $"{prefix}:{idPart}";
+                }
+            }
+
+            // No nsu= prefix — core namespace (ns=0)
+            return $"opcua:{nodeId}";
+        }
+
+        private static string FromCurie(string curie, Dictionary<string, string> prefixToUri)
+        {
+            int colon = curie.IndexOf(':');
+            if (colon < 0) return curie;
+
+            var prefix = curie.Substring(0, colon);
+            var localPart = curie.Substring(colon + 1);
+
+            if (prefixToUri.TryGetValue(prefix, out var nsUri))
+            {
+                // Core namespace — bare node id
+                var cleanUri = nsUri.TrimEnd('/');
+                if (cleanUri == "http://opcfoundation.org/UA")
+                    return localPart;
+
+                return $"nsu={cleanUri};{localPart}";
+            }
+
+            return curie;
+        }
+
+        private JObject NodeToJsonLd(Json.UANode node, bool isStub)
+        {
+            var obj = new JObject();
+            obj["@id"] = ToCurie(node.NodeId);
+            obj["@type"] = NodeClassToJsonLdType(node);
+
+            if (node.BrowseName != null)
+                obj["browseName"] = node.BrowseName;
+
+            if (isStub)
+            {
+                // Stubs: only emit SubtypeOf + isExternalReference
+                if (node.References != null)
+                {
+                    foreach (var r in node.References)
+                    {
+                        if (r.ReferenceTypeId == ReferenceTypeIds.HasSubtype && !(r.IsForward ?? true))
+                            obj["SubtypeOf"] = ToCurie(r.TargetId);
+                    }
+                }
+                obj["isExternalReference"] = true;
+                return obj;
+            }
+
+            if (node.SymbolicName != null)
+                obj["symbolicName"] = node.SymbolicName;
+
+            if (node.Description?.T != null && node.Description.T.Count > 0)
+            {
+                var desc = node.Description.T[0];
+                if (desc.Count >= 2 && !string.IsNullOrEmpty(desc[1]))
+                    obj["description"] = desc[1];
+            }
+
+            if (node.ReleaseStatus != null)
+                obj["releaseStatus"] = node.ReleaseStatus.ToString();
+
+            // dataType
+            if (node is Json.UAVariable v && v.DataType != null) obj["dataType"] = ToCurie(v.DataType);
+            if (node is Json.UAVariableType vt && vt.DataType != null) obj["dataType"] = ToCurie(vt.DataType);
+
+            // valueRank
+            if (node is Json.UAVariable v2 && v2.ValueRank != null) obj["valueRank"] = v2.ValueRank;
+            if (node is Json.UAVariableType vt2 && vt2.ValueRank != null) obj["valueRank"] = vt2.ValueRank;
+
+            // arrayDimensions
+            if (node is Json.UAVariable v3 && v3.ArrayDimensions != null) obj["arrayDimensions"] = v3.ArrayDimensions;
+            if (node is Json.UAVariableType vt3 && vt3.ArrayDimensions != null) obj["arrayDimensions"] = vt3.ArrayDimensions;
+
+            if (node.TypeId != null) obj["typeDefinition"] = ToCurie(node.TypeId);
+            if (node.ModellingRuleId != null) obj["modellingRule"] = ToCurie(node.ModellingRuleId);
+            if (node.ParentId != null) obj["parent"] = ToCurie(node.ParentId);
+
+            if (node.AccessRestrictions != null && node.AccessRestrictions != 0)
+                obj["accessRestrictions"] = node.AccessRestrictions;
+
+            // rolePermissions
+            if (node.RolePermissions != null && node.RolePermissions.Count > 0)
+            {
+                var rpArray = new JArray();
+                foreach (var rp in node.RolePermissions)
+                {
+                    var rpObj = new JObject();
+                    rpObj["roleId"] = ToCurie(rp.RoleId);
+                    rpObj["permissions"] = rp.Permissions;
+                    rpArray.Add(rpObj);
+                }
+                obj["rolePermissions"] = rpArray;
+            }
+
+            // Convert references to named properties
+            if (node.References != null)
+            {
+                var namedRefs = new Dictionary<string, List<string>>();
+
+                var genericRefs = new JArray();
+
+                foreach (var r in node.References)
+                {
+                    bool isForward = r.IsForward ?? true;
+                    var propName = GetNamedRefProperty(r.ReferenceTypeId, isForward);
+
+                    if (propName != null)
+                    {
+                        if (!namedRefs.ContainsKey(propName))
+                            namedRefs[propName] = new List<string>();
+                        namedRefs[propName].Add(ToCurie(r.TargetId));
+                    }
+                    else
+                    {
+                        var refObj = new JObject();
+                        refObj["referenceType"] = ToCurie(r.ReferenceTypeId);
+                        if (!isForward) refObj["isForward"] = false;
+                        refObj["target"] = ToCurie(r.TargetId);
+                        genericRefs.Add(refObj);
+                    }
+                }
+
+                foreach (var kvp in namedRefs)
+                {
+                    if (kvp.Value.Count == 1)
+                        obj[kvp.Key] = kvp.Value[0];
+                    else
+                        obj[kvp.Key] = new JArray(kvp.Value);
+                }
+
+                if (genericRefs.Count > 0)
+                    obj["references"] = genericRefs;
+            }
+
+            // DataTypeDefinition
+            if (node is Json.UADataType dt && dt.Definition != null)
+            {
+                var defObj = new JObject();
+
+                if (dt.Definition.IsUnion != null)
+                    defObj["isUnion"] = dt.Definition.IsUnion.Value;
+
+                if (dt.Definition.Fields != null && dt.Definition.Fields.Count > 0)
+                {
+                    var fieldsArray = new JArray();
+                    foreach (var field in dt.Definition.Fields)
+                    {
+                        var fieldObj = new JObject();
+                        fieldObj["fieldName"] = field.Name;
+
+                        if (field.Value != null)
+                            fieldObj["fieldValue"] = field.Value;
+
+                        if (field.DataType != null)
+                            fieldObj["fieldDataType"] = ToCurie(field.DataType);
+
+                        if (field.ValueRank != null)
+                            fieldObj["valueRank"] = field.ValueRank;
+
+                        if (field.IsOptional == true)
+                            fieldObj["isOptional"] = true;
+
+                        if (field.AllowSubTypes == true)
+                            fieldObj["allowSubTypes"] = true;
+
+                        fieldsArray.Add(fieldObj);
+                    }
+                    defObj["fields"] = fieldsArray;
+                }
+
+                obj["definition"] = defObj;
+            }
+
+            return obj;
+        }
+
+        private static string NodeClassToJsonLdType(Json.UANode node)
+        {
+            return node switch
+            {
+                Json.UADataType => "opcua:UADataType",
+                Json.UAObjectType => "opcua:UAObjectType",
+                Json.UAVariableType => "opcua:UAVariableType",
+                Json.UAReferenceType => "opcua:UAReferenceType",
+                Json.UAObject => "opcua:UAObject",
+                Json.UAVariable => "opcua:UAVariable",
+                Json.UAMethod => "opcua:UAMethod",
+                Json.UAView => "opcua:UAView",
+                _ => "opcua:UANode"
+            };
+        }
+
+        private static string? GetNamedRefProperty(string? refTypeId, bool isForward)
+        {
+            return (refTypeId, isForward) switch
+            {
+                ("i=45", true) => "HasSubtype",
+                ("i=45", false) => "SubtypeOf",
+                ("i=46", true) => "HasProperty",
+                ("i=46", false) => "PropertyOf",
+                ("i=47", true) => "HasComponent",
+                ("i=47", false) => "ComponentOf",
+                ("i=35", true) => "Organizes",
+                ("i=35", false) => "OrganizedBy",
+                ("i=38", true) => "HasEncoding",
+                ("i=38", false) => "EncodingOf",
+                ("i=39", true) => "HasDescription",
+                ("i=14156", true) => "HasOrderedComponent",
+                ("i=14156", false) => "OrderedComponentOf",
+                ("i=49", true) => "HasOrderedComponent",
+                ("i=49", false) => "OrderedComponentOf",
+                _ => null
+            };
+        }
+
+        private static (string refTypeId, bool isForward)? GetRefFromProperty(string propertyName)
+        {
+            return propertyName switch
+            {
+                "HasSubtype" => ("i=45", true),
+                "SubtypeOf" => ("i=45", false),
+                "HasProperty" => ("i=46", true),
+                "PropertyOf" => ("i=46", false),
+                "HasComponent" => ("i=47", true),
+                "ComponentOf" => ("i=47", false),
+                "Organizes" => ("i=35", true),
+                "OrganizedBy" => ("i=35", false),
+                "HasEncoding" => ("i=38", true),
+                "EncodingOf" => ("i=38", false),
+                "HasDescription" => ("i=39", true),
+                "HasOrderedComponent" => ("i=49", true),
+                "OrderedComponentOf" => ("i=49", false),
+                _ => null
+            };
+        }
+
+        private static Json.UANode CreateNodeFromJsonLdType(string type)
+        {
+            var cleanType = type.Replace("opcua:", "");
+            return cleanType switch
+            {
+                "UADataType" => new Json.UADataType { NodeClass = Json.NodeClass.UADataType },
+                "UAObjectType" => new Json.UAObjectType { NodeClass = Json.NodeClass.UAObjectType },
+                "UAVariableType" => new Json.UAVariableType { NodeClass = Json.NodeClass.UAVariableType },
+                "UAReferenceType" => new Json.UAReferenceType { NodeClass = Json.NodeClass.UAReferenceType },
+                "UAVariable" => new Json.UAVariable { NodeClass = Json.NodeClass.UAVariable },
+                "UAMethod" => new Json.UAMethod { NodeClass = Json.NodeClass.UAMethod },
+                "UAView" => new Json.UAView { NodeClass = Json.NodeClass.UAView },
+                _ => new Json.UAObject { NodeClass = Json.NodeClass.UAObject }
+            };
+        }
+
+        private Json.UANode? JsonLdEntryToNode(JObject obj, Dictionary<string, string> prefixToUri)
+        {
+            var type = obj["@type"]?.ToString();
+            if (type == null) return null;
+
+            var node = CreateNodeFromJsonLdType(type);
+
+            var id = obj["@id"]?.ToString();
+            node.NodeId = id != null ? FromCurie(id, prefixToUri) : null;
+            node.BrowseName = obj["browseName"]?.ToString();
+            node.SymbolicName = obj["symbolicName"]?.ToString();
+
+            var desc = obj["description"]?.ToString();
+            if (desc != null)
+                node.Description = new Json.LocalizedText { T = new List<List<string>> { new List<string> { "", desc } } };
+
+            var rs = obj["releaseStatus"]?.ToString();
+            if (rs != null)
+            {
+                node.ReleaseStatus = rs switch
+                {
+                    "Draft" => Json.ReleaseStatus.Draft,
+                    "Deprecated" => Json.ReleaseStatus.Deprecated,
+                    _ => null
+                };
+            }
+
+            var typeDef = obj["typeDefinition"]?.ToString();
+            if (typeDef != null) node.TypeId = FromCurie(typeDef, prefixToUri);
+
+            var mr = obj["modellingRule"]?.ToString();
+            if (mr != null) node.ModellingRuleId = FromCurie(mr, prefixToUri);
+
+            var parentVal = obj["parent"]?.ToString();
+            if (parentVal != null) node.ParentId = FromCurie(parentVal, prefixToUri);
+
+            // dataType, valueRank, arrayDimensions
+            var dataTypeVal = obj["dataType"]?.ToString();
+            var valueRankVal = obj["valueRank"]?.Value<int?>();
+            var arrayDimsVal = obj["arrayDimensions"]?.ToString();
+
+            if (node is Json.UAVariable v)
+            {
+                if (dataTypeVal != null) v.DataType = FromCurie(dataTypeVal, prefixToUri);
+                v.ValueRank = valueRankVal;
+                v.ArrayDimensions = arrayDimsVal;
+            }
+            if (node is Json.UAVariableType vt)
+            {
+                if (dataTypeVal != null) vt.DataType = FromCurie(dataTypeVal, prefixToUri);
+                vt.ValueRank = valueRankVal;
+                vt.ArrayDimensions = arrayDimsVal;
+            }
+
+            var arVal = obj["accessRestrictions"]?.Value<long?>();
+            if (arVal != null) node.AccessRestrictions = arVal;
+
+            // rolePermissions
+            var rps = obj["rolePermissions"] as JArray;
+            if (rps != null)
+            {
+                node.RolePermissions = new List<Json.RolePermission>();
+                foreach (var rp in rps)
+                {
+                    var roleId = rp["roleId"]?.ToString();
+                    var perms = rp["permissions"]?.Value<long?>();
+                    node.RolePermissions.Add(new Json.RolePermission(
+                        roleId != null ? FromCurie(roleId, prefixToUri) : null,
+                        perms ?? 0));
+                }
+            }
+
+            // Named reference properties → References
+            // Iterate JObject properties in their natural order to preserve serialization order
+            var refs = new List<Json.Reference>();
+
+            foreach (var prop in obj.Properties())
+            {
+                var refInfo = GetRefFromProperty(prop.Name);
+                if (refInfo == null) continue;
+
+                if (prop.Value.Type == JTokenType.Array)
+                {
+                    foreach (var item in (JArray)prop.Value)
+                    {
+                        refs.Add(new Json.Reference
+                        {
+                            ReferenceTypeId = refInfo.Value.refTypeId,
+                            IsForward = refInfo.Value.isForward ? null : false,
+                            TargetId = FromCurie(item.ToString(), prefixToUri)
+                        });
+                    }
+                }
+                else if (prop.Value.Type == JTokenType.String)
+                {
+                    refs.Add(new Json.Reference
+                    {
+                        ReferenceTypeId = refInfo.Value.refTypeId,
+                        IsForward = refInfo.Value.isForward ? null : false,
+                        TargetId = FromCurie(prop.Value.ToString(), prefixToUri)
+                    });
+                }
+            }
+
+            // Generic references array for unmapped reference types
+            var genericRefs = obj["references"] as JArray;
+            if (genericRefs != null)
+            {
+                foreach (var gr in genericRefs)
+                {
+                    var refTypeId = gr["referenceType"]?.ToString();
+                    var isForward = gr["isForward"]?.Value<bool?>() ?? true;
+                    var target = gr["target"]?.ToString();
+                    if (refTypeId != null && target != null)
+                    {
+                        refs.Add(new Json.Reference
+                        {
+                            ReferenceTypeId = FromCurie(refTypeId, prefixToUri),
+                            IsForward = isForward ? null : false,
+                            TargetId = FromCurie(target, prefixToUri)
+                        });
+                    }
+                }
+            }
+
+            node.References = refs.Count > 0 ? refs : null;
+
+            // DataTypeDefinition
+            if (node is Json.UADataType dt)
+            {
+                var def = obj["definition"] as JObject;
+                if (def != null)
+                {
+                    dt.Definition = new Json.DataTypeDefinition();
+                    dt.Definition.IsUnion = def["isUnion"]?.Value<bool?>();
+
+                    var fields = def["fields"] as JArray;
+                    if (fields != null)
+                    {
+                        dt.Definition.Fields = new List<Json.DataTypeField>();
+                        foreach (var field in fields)
+                        {
+                            var f = new Json.DataTypeField();
+                            f.Name = field["fieldName"]?.ToString();
+                            f.Value = field["fieldValue"]?.Value<int?>();
+                            var fdt = field["fieldDataType"]?.ToString();
+                            if (fdt != null) f.DataType = FromCurie(fdt, prefixToUri);
+                            f.ValueRank = field["valueRank"]?.Value<int?>();
+                            f.IsOptional = field["isOptional"]?.Value<bool?>();
+                            f.AllowSubTypes = field["allowSubTypes"]?.Value<bool?>();
+                            dt.Definition.Fields.Add(f);
+                        }
+                    }
+                }
+            }
+
+            return node;
+        }
+
+        #endregion
     }
 }

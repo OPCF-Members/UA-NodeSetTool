@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using NodeSetTool;
 using Opc.Ua.JsonNodeSet;
 using Opc.Ua.JsonNodeSet.Model;
@@ -187,6 +188,8 @@ namespace Opc.Ua.NodeSetTool.Tests
             Assert.NotNull(parentNode.Children);
             Assert.NotNull(parentNode.Children.Variables);
             Assert.Contains(parentNode.Children.Variables, v => v.NodeId == DemoNsu + "i=69");
+
+            var x = nodeSet.Nodes.N5Variables.Find(v => v.NodeId == DemoNsu + "i=69");
 
             // i=69 should NOT appear at top level in any node list
             Assert.DoesNotContain(nodeSet.Nodes.N5Variables ?? new List<UAVariable>(), v => v.NodeId == DemoNsu + "i=69");
@@ -562,6 +565,159 @@ namespace Opc.Ua.NodeSetTool.Tests
             var space = LoadDemoModelIntoAddressSpace();
             Assert.False(space.IsTypeOf("nsu=nonexistent;i=99999", DemoNsu + "i=5"));
         }
+
+        #region JSON-LD Tests
+
+        private static AddressSpace LoadDemoModelWithServicesIntoAddressSpace()
+        {
+            var space = new AddressSpace();
+
+            var services = new NodeSetSerializer();
+            services.Load(Path.Combine(ExamplesDir, "Opc.Ua.NodeSet2.Services.xml"));
+            services.LoadInto(space);
+
+            var demo = new NodeSetSerializer();
+            demo.Load(Path.Combine(ExamplesDir, "DemoModel.NodeSet2.json"));
+            demo.LoadInto(space);
+
+            return space;
+        }
+
+        [Fact]
+        public void SaveJsonLd_ProducesValidJson()
+        {
+            var space = LoadDemoModelWithServicesIntoAddressSpace();
+            var serializer = NodeSetSerializer.FromAddressSpaceAsJsonLd(space, DemoModelUri);
+            var tempFile = TempFile(".jsonld");
+            serializer.SaveJsonLd(tempFile);
+
+            var json = File.ReadAllText(tempFile);
+            var doc = JObject.Parse(json);
+
+            Assert.NotNull(doc["@context"]);
+            Assert.NotNull(doc["@graph"]);
+            Assert.Equal("opcua:UANodeSet", doc["@type"]?.ToString());
+            Assert.Equal(DemoModelUri, doc["modelUri"]?.ToString());
+        }
+
+        [Fact]
+        public void SaveJsonLd_IncludesExternalStubs()
+        {
+            var space = LoadDemoModelWithServicesIntoAddressSpace();
+            var serializer = NodeSetSerializer.FromAddressSpaceAsJsonLd(space, DemoModelUri);
+            var tempFile = TempFile(".jsonld");
+            serializer.SaveJsonLd(tempFile);
+
+            var doc = JObject.Parse(File.ReadAllText(tempFile));
+            var graph = (JArray)doc["@graph"]!;
+
+            // Find stubs (isExternalReference: true)
+            var stubs = graph.Where(n => n["isExternalReference"]?.Value<bool>() == true).ToList();
+            Assert.True(stubs.Count > 0, "Expected external stubs in JSON-LD output");
+
+            // Well-known base types should be stubs (Structure i=22, Enumeration i=29)
+            Assert.Contains(stubs, s => s["@id"]?.ToString() == "opcua:i=22");
+            Assert.Contains(stubs, s => s["@id"]?.ToString() == "opcua:i=29");
+
+            // Stubs should have browseName
+            var structStub = stubs.First(s => s["@id"]?.ToString() == "opcua:i=22");
+            Assert.Equal("Structure", structStub["browseName"]?.ToString());
+        }
+
+        [Fact]
+        public void SaveJsonLd_StubsHaveSupertypeChain()
+        {
+            var space = LoadDemoModelWithServicesIntoAddressSpace();
+            var serializer = NodeSetSerializer.FromAddressSpaceAsJsonLd(space, DemoModelUri);
+            var tempFile = TempFile(".jsonld");
+            serializer.SaveJsonLd(tempFile);
+
+            var doc = JObject.Parse(File.ReadAllText(tempFile));
+            var graph = (JArray)doc["@graph"]!;
+            var stubs = graph.Where(n => n["isExternalReference"]?.Value<bool>() == true).ToList();
+
+            // i=22 (Structure) should have SubtypeOf i=24 (BaseDataType)
+            var structStub = stubs.First(s => s["@id"]?.ToString() == "opcua:i=22");
+            Assert.Equal("opcua:i=24", structStub["SubtypeOf"]?.ToString());
+
+            // i=24 (BaseDataType) should also be present as a stub (chased supertype)
+            Assert.Contains(stubs, s => s["@id"]?.ToString() == "opcua:i=24");
+        }
+
+        [Fact]
+        public void LoadJsonLd_SkipsStubs()
+        {
+            var space = LoadDemoModelWithServicesIntoAddressSpace();
+            var serializer = NodeSetSerializer.FromAddressSpaceAsJsonLd(space, DemoModelUri);
+            var tempFile = TempFile(".jsonld");
+            serializer.SaveJsonLd(tempFile);
+
+            // Reimport the JSON-LD
+            var space2 = new AddressSpace();
+            var ser2 = new NodeSetSerializer();
+            ser2.Load(tempFile);
+            ser2.LoadInto(space2);
+
+            // Model should be present
+            Assert.Contains(DemoModelUri, space2.GetModelUris());
+
+            // Model nodes should be present
+            Assert.NotNull(space2.Read(DemoNsu + "i=68"));
+
+            // Stub nodes (core namespace) should NOT be in the address space
+            Assert.Null(space2.Read("i=22"));
+            Assert.Null(space2.Read("i=29"));
+        }
+
+        [Fact]
+        public void RoundTrip_JsonLd()
+        {
+            // Load original
+            var original = new NodeSetSerializer();
+            original.Load(Path.Combine(ExamplesDir, "DemoModel.NodeSet2.json"));
+
+            // Push into AddressSpace (without services, to match original model metadata)
+            var space = new AddressSpace();
+            original.LoadInto(space);
+
+            // Export to JSON-LD
+            var jsonLdSerializer = NodeSetSerializer.FromAddressSpaceAsJsonLd(space, DemoModelUri);
+            var tempJsonLd = TempFile(".jsonld");
+            jsonLdSerializer.SaveJsonLd(tempJsonLd);
+
+            // Reimport from JSON-LD
+            var reimported = new NodeSetSerializer();
+            reimported.Load(tempJsonLd);
+
+            // Export reimported to JSON for comparison
+            var tempJson = TempFile(".json");
+            reimported.SaveJson(tempJson);
+
+            var reloaded = new NodeSetSerializer();
+            reloaded.Load(tempJson);
+
+            Assert.True(original.Compare(reloaded), FormatErrors(original));
+        }
+
+        [Fact]
+        public void LoadJsonLd_FromExampleFile()
+        {
+            // Load the hand-crafted example JSON-LD file
+            var exampleFile = Path.Combine(ExamplesDir, "DemoModel.NodeSet2.jsonld");
+            if (!File.Exists(exampleFile))
+                return; // skip if example not present
+
+            var space = new AddressSpace();
+            var serializer = new NodeSetSerializer();
+            serializer.Load(exampleFile);
+            serializer.LoadInto(space);
+
+            Assert.Contains(DemoModelUri, space.GetModelUris());
+            Assert.NotNull(space.Read(DemoNsu + "i=68")); // EnumUnderscoreTest
+            Assert.NotNull(space.Read(DemoNsu + "i=1"));  // HeaterStatus
+        }
+
+        #endregion
 
         private static string FormatErrors(NodeSetSerializer serializer)
         {

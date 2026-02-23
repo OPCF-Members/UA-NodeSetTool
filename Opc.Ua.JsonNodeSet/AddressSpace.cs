@@ -149,6 +149,34 @@ namespace Opc.Ua.JsonNodeSet
             return results;
         }
 
+        public List<ReferenceEntry> BrowseWithSubtypes(string nodeId,
+            string? referenceTypeId = null,
+            bool includeForward = true,
+            bool includeInverse = true)
+        {
+            var results = new List<ReferenceEntry>();
+
+            if (includeForward && _forwardRefs.TryGetValue(nodeId, out var fwd))
+            {
+                foreach (var entry in fwd)
+                {
+                    if (referenceTypeId == null || IsTypeOf(entry.ReferenceTypeId, referenceTypeId))
+                        results.Add(entry);
+                }
+            }
+
+            if (includeInverse && _inverseRefs.TryGetValue(nodeId, out var inv))
+            {
+                foreach (var entry in inv)
+                {
+                    if (referenceTypeId == null || IsTypeOf(entry.ReferenceTypeId, referenceTypeId))
+                        results.Add(entry);
+                }
+            }
+
+            return results;
+        }
+
         public bool IsTypeOf(string nodeId, string targetTypeId)
         {
             ArgumentNullException.ThrowIfNull(nodeId);
@@ -168,12 +196,207 @@ namespace Opc.Ua.JsonNodeSet
             return false;
         }
 
+        public (UANodeSet NodeSet, List<UANode> Stubs) GetNodeSetWithStubs(string modelUri)
+        {
+            var nodeSet = GetNodeSet(modelUri);
+            var stubs = new List<UANode>();
+            var stubIds = new HashSet<string>();
+
+            // Collect all model node IDs (top-level + children)
+            var modelNodeIds = new HashSet<string>();
+            void CollectIds(IEnumerable<UANode>? nodes)
+            {
+                if (nodes == null) return;
+                foreach (var n in nodes)
+                {
+                    if (n.NodeId != null) modelNodeIds.Add(n.NodeId);
+                    CollectChildNodeIds(n, modelNodeIds);
+                }
+            }
+            CollectIds(nodeSet.Nodes?.N1ReferenceTypes);
+            CollectIds(nodeSet.Nodes?.N2DataTypes);
+            CollectIds(nodeSet.Nodes?.N3VariableTypes);
+            CollectIds(nodeSet.Nodes?.N4ObjectTypes);
+            CollectIds(nodeSet.Nodes?.N5Variables);
+            CollectIds(nodeSet.Nodes?.N6Methods);
+            CollectIds(nodeSet.Nodes?.N7Objects);
+            CollectIds(nodeSet.Nodes?.N8Views);
+
+            // Collect all external NodeId references
+            var externalIds = new HashSet<string>();
+            void WalkNodes(IEnumerable<UANode>? nodes)
+            {
+                if (nodes == null) return;
+                foreach (var n in nodes)
+                    CollectExternalRefsFromNode(n, modelNodeIds, externalIds);
+            }
+            WalkNodes(nodeSet.Nodes?.N1ReferenceTypes);
+            WalkNodes(nodeSet.Nodes?.N2DataTypes);
+            WalkNodes(nodeSet.Nodes?.N3VariableTypes);
+            WalkNodes(nodeSet.Nodes?.N4ObjectTypes);
+            WalkNodes(nodeSet.Nodes?.N5Variables);
+            WalkNodes(nodeSet.Nodes?.N6Methods);
+            WalkNodes(nodeSet.Nodes?.N7Objects);
+            WalkNodes(nodeSet.Nodes?.N8Views);
+
+            // Create stubs and chase supertypes via BFS
+            var toProcess = new Queue<string>(externalIds);
+            while (toProcess.Count > 0)
+            {
+                var id = toProcess.Dequeue();
+                if (stubIds.Contains(id) || modelNodeIds.Contains(id)) continue;
+
+                var stub = CreateStubNode(id);
+                stubs.Add(stub);
+                stubIds.Add(id);
+
+                // Chase supertype: if stub has an inverse HasSubtype, enqueue the target
+                if (stub.References != null)
+                {
+                    foreach (var r in stub.References)
+                    {
+                        if (r.ReferenceTypeId == HasSubtypeId && !(r.IsForward ?? true))
+                        {
+                            if (r.TargetId != null && !stubIds.Contains(r.TargetId) && !modelNodeIds.Contains(r.TargetId))
+                                toProcess.Enqueue(r.TargetId);
+                        }
+                    }
+                }
+            }
+
+            return (nodeSet, stubs);
+        }
+
+        private static void CollectChildNodeIds(UANode node, HashSet<string> ids)
+        {
+            if (node.Children == null) return;
+            void Collect(IEnumerable<UANode>? children)
+            {
+                if (children == null) return;
+                foreach (var c in children)
+                {
+                    if (c.NodeId != null) ids.Add(c.NodeId);
+                    CollectChildNodeIds(c, ids);
+                }
+            }
+            Collect(node.Children.Objects);
+            Collect(node.Children.Variables);
+            Collect(node.Children.Methods);
+        }
+
+        private static void CollectExternalRefsFromNode(UANode node, HashSet<string> modelNodeIds, HashSet<string> externalIds)
+        {
+            void AddIfExternal(string? nodeId)
+            {
+                if (nodeId != null && !modelNodeIds.Contains(nodeId))
+                    externalIds.Add(nodeId);
+            }
+
+            AddIfExternal(node.TypeId);
+            AddIfExternal(node.ModellingRuleId);
+
+            if (node is UAVariable v) AddIfExternal(v.DataType);
+            if (node is UAVariableType vt) AddIfExternal(vt.DataType);
+
+            if (node.References != null)
+                foreach (var r in node.References)
+                    AddIfExternal(r.TargetId);
+
+            if (node.RolePermissions != null)
+                foreach (var rp in node.RolePermissions)
+                    AddIfExternal(rp.RoleId);
+
+            if (node is UADataType dt && dt.Definition?.Fields != null)
+                foreach (var f in dt.Definition.Fields)
+                    AddIfExternal(f.DataType);
+
+            if (node.Children != null)
+            {
+                void WalkChildren(IEnumerable<UANode>? children)
+                {
+                    if (children == null) return;
+                    foreach (var c in children)
+                        CollectExternalRefsFromNode(c, modelNodeIds, externalIds);
+                }
+                WalkChildren(node.Children.Objects);
+                WalkChildren(node.Children.Variables);
+                WalkChildren(node.Children.Methods);
+            }
+        }
+
+        private UANode CreateStubNode(string nodeId)
+        {
+            if (_nodes.TryGetValue(nodeId, out var existing))
+            {
+                UANode stub = existing switch
+                {
+                    UADataType => new UADataType { NodeClass = NodeClass.UADataType },
+                    UAObjectType => new UAObjectType { NodeClass = NodeClass.UAObjectType },
+                    UAVariableType => new UAVariableType { NodeClass = NodeClass.UAVariableType },
+                    UAReferenceType => new UAReferenceType { NodeClass = NodeClass.UAReferenceType },
+                    UAVariable => new UAVariable { NodeClass = NodeClass.UAVariable },
+                    UAMethod => new UAMethod { NodeClass = NodeClass.UAMethod },
+                    UAView => new UAView { NodeClass = NodeClass.UAView },
+                    _ => new UAObject { NodeClass = NodeClass.UAObject }
+                };
+
+                stub.NodeId = nodeId;
+                stub.BrowseName = existing.BrowseName;
+
+                // Include supertype reference if this node has one
+                if (_inverseRefs.TryGetValue(nodeId, out var invRefs))
+                {
+                    foreach (var entry in invRefs)
+                    {
+                        if (entry.ReferenceTypeId == HasSubtypeId)
+                        {
+                            stub.References = new List<Reference>
+                            {
+                                new Reference
+                                {
+                                    ReferenceTypeId = HasSubtypeId,
+                                    IsForward = false,
+                                    TargetId = entry.TargetNodeId
+                                }
+                            };
+                            break;
+                        }
+                    }
+                }
+
+                return stub;
+            }
+            else
+            {
+                // Unknown node — emit minimal stub
+                return new UAObject
+                {
+                    NodeId = nodeId,
+                    NodeClass = NodeClass.UAObject,
+                    BrowseName = nodeId
+                };
+            }
+        }
+
         public UANodeSet GetNodeSet(string modelUri)
         {
             var nodeSet = new UANodeSet();
 
             if (_models.TryGetValue(modelUri, out var model))
             {
+                // Enrich RequiredModels with version/publication info from registered models
+                if (model.RequiredModels != null)
+                {
+                    foreach (var req in model.RequiredModels)
+                    {
+                        if (req.ModelUri != null && _models.TryGetValue(req.ModelUri, out var registeredModel))
+                        {
+                            req.VarVersion ??= registeredModel.VarVersion;
+                            req.PublicationDate ??= registeredModel.PublicationDate;
+                        }
+                    }
+                }
+
                 nodeSet.Models = new List<ModelDefinition> { model };
             }
             else
@@ -182,12 +405,23 @@ namespace Opc.Ua.JsonNodeSet
             }
 
             var prefix = $"nsu={modelUri};";
+            var isCoreNamespace = string.Equals(modelUri, CoreNamespaceUri, StringComparison.OrdinalIgnoreCase);
             var filtered = new List<UANode>();
             var filteredIds = new HashSet<string>();
 
             foreach (var node in _sequence)
             {
-                if (node.NodeId != null && node.NodeId.StartsWith(prefix))
+                if (node.NodeId == null) continue;
+
+                // exclude nodes with parents.
+                if (node.ParentId != null)
+                {
+                    continue;
+                }
+
+                // Core namespace nodes may be stored without nsu= prefix (e.g. "i=123")
+                if (node.NodeId.StartsWith(prefix)
+                    || (isCoreNamespace && !node.NodeId.StartsWith(NsuPrefix)))
                 {
                     filtered.Add(node);
                     filteredIds.Add(node.NodeId);
@@ -198,9 +432,6 @@ namespace Opc.Ua.JsonNodeSet
 
             foreach (var node in filtered)
             {
-                if (node.ParentId != null && filteredIds.Contains(node.ParentId))
-                    continue;
-
                 switch (node)
                 {
                     case UAReferenceType rt: (nodeSet.Nodes.N1ReferenceTypes ??= new()).Add(rt); break;
@@ -302,6 +533,118 @@ namespace Opc.Ua.JsonNodeSet
             return new List<string>(_models.Keys);
         }
 
+        public bool RemoveModel(string modelUri)
+        {
+            if (!_models.ContainsKey(modelUri))
+                return false;
+
+            // Collect all node IDs belonging to this model
+            var prefix = $"nsu={modelUri};";
+            var nodeIds = new HashSet<string>(
+                _nodes.Keys.Where(id => id.StartsWith(prefix)));
+
+            // Check if any nodes from OTHER models depend on nodes in this model,
+            // either via explicit forward references or namespace fields (TypeId, DataType, etc.).
+            // Collect the set of dependent namespace URIs.
+            var dependentNamespaces = new HashSet<string>();
+            foreach (var node in _sequence)
+            {
+                if (node.NodeId != null && nodeIds.Contains(node.NodeId))
+                    continue; // skip the model's own nodes
+
+                var nodeNs = ExtractNsu(node.NodeId ?? "") ?? "";
+
+                // Check explicit forward references targeting nodes in this model
+                if (node.References != null)
+                {
+                    foreach (var r in node.References)
+                    {
+                        if (r.TargetId == null) continue;
+                        bool isForward = r.IsForward ?? true;
+                        if (isForward && nodeIds.Contains(r.TargetId))
+                            dependentNamespaces.Add(nodeNs);
+                    }
+                }
+
+                // Check namespace fields (TypeId, DataType, BrowseName, etc.)
+                CollectDependentNamespace(node.NodeId, modelUri, nodeNs, dependentNamespaces);
+                CollectDependentNamespace(node.BrowseName, modelUri, nodeNs, dependentNamespaces);
+                CollectDependentNamespace(node.ParentId, modelUri, nodeNs, dependentNamespaces);
+                CollectDependentNamespace(node.TypeId, modelUri, nodeNs, dependentNamespaces);
+                CollectDependentNamespace(node.ModellingRuleId, modelUri, nodeNs, dependentNamespaces);
+
+                if (node is UAVariable v)
+                    CollectDependentNamespace(v.DataType, modelUri, nodeNs, dependentNamespaces);
+                if (node is UAVariableType vt)
+                    CollectDependentNamespace(vt.DataType, modelUri, nodeNs, dependentNamespaces);
+
+                if (node.References != null)
+                    foreach (var r in node.References)
+                        CollectDependentNamespace(r.ReferenceTypeId, modelUri, nodeNs, dependentNamespaces);
+
+                if (node.Children != null)
+                    CollectChildrenDependencies(node.Children, modelUri, nodeIds, dependentNamespaces);
+            }
+
+            if (dependentNamespaces.Count > 0)
+                throw new InvalidOperationException(
+                    $"Cannot remove model '{modelUri}'\nIt is used by\n{string.Join("\n", dependentNamespaces)}");
+
+            // Remove all nodes belonging to this model
+            foreach (var nodeId in nodeIds)
+            {
+                RemoveNode(nodeId);
+            }
+
+            _models.Remove(modelUri);
+            return true;
+        }
+
+        /// <summary>
+        /// Pre-computes DataTypeForm for all UADataType nodes based on inheritance.
+        /// Rules (checked in order):
+        ///   1. Inherits from Union → "Union"
+        ///   2. Inherits from Structure → "Structure"
+        ///   3. Inherits from Enumeration → "Enumeration"
+        ///   4. Inherits from UInteger AND has Fields → "OptionSet"
+        ///   5. Otherwise → null (not a structured form)
+        /// </summary>
+        public void ComputeDataTypeForms()
+        {
+            var structureId = FindWellKnownNode("i=22");
+            var enumerationId = FindWellKnownNode("i=29");
+            var unionId = FindWellKnownNode("i=12756");
+            var uintegerId = FindWellKnownNode("i=28");
+
+            foreach (var node in _sequence)
+            {
+                if (node is not UADataType dt) continue;
+                if (node.NodeId == null) continue;
+
+                string? form = null;
+
+                if (unionId != null && IsTypeOf(node.NodeId, unionId))
+                    form = "Union";
+                else if (structureId != null && IsTypeOf(node.NodeId, structureId))
+                    form = "Structure";
+                else if (enumerationId != null && IsTypeOf(node.NodeId, enumerationId))
+                    form = "Enumeration";
+                else if (uintegerId != null && IsTypeOf(node.NodeId, uintegerId) &&
+                         dt.Definition?.Fields != null && dt.Definition.Fields.Count > 0)
+                    form = "OptionSet";
+
+                dt.DataTypeForm = form;
+            }
+        }
+
+        private string? FindWellKnownNode(string shortId)
+        {
+            var nsuId = $"nsu={CoreNamespaceUri};{shortId}";
+            if (_nodes.ContainsKey(nsuId)) return nsuId;
+            if (_nodes.ContainsKey(shortId)) return shortId;
+            return null;
+        }
+
         #region Namespace Validation
 
         private HashSet<string> GetKnownNamespaceUris()
@@ -389,6 +732,59 @@ namespace Opc.Ua.JsonNodeSet
 
             return value.Substring(NsuPrefix.Length, semi - NsuPrefix.Length);
         }
+
+        private static void CollectDependentNamespace(string? value, string targetUri, string nodeNs, HashSet<string> result)
+        {
+            if (value == null) return;
+            var uri = ExtractNsu(value);
+            if (uri != null && uri == targetUri)
+                result.Add(nodeNs);
+        }
+
+        private static void CollectChildrenDependencies(ChildList children, string modelUri, HashSet<string> nodeIds, HashSet<string> result)
+        {
+            void Check(UANode node)
+            {
+                var nodeNs = ExtractNsu(node.NodeId ?? "") ?? "";
+
+                if (node.References != null)
+                {
+                    foreach (var r in node.References)
+                    {
+                        if (r.TargetId == null) continue;
+                        bool isForward = r.IsForward ?? true;
+                        if (isForward && nodeIds.Contains(r.TargetId))
+                            result.Add(nodeNs);
+                    }
+                }
+
+                CollectDependentNamespace(node.NodeId, modelUri, nodeNs, result);
+                CollectDependentNamespace(node.BrowseName, modelUri, nodeNs, result);
+                CollectDependentNamespace(node.ParentId, modelUri, nodeNs, result);
+                CollectDependentNamespace(node.TypeId, modelUri, nodeNs, result);
+                CollectDependentNamespace(node.ModellingRuleId, modelUri, nodeNs, result);
+
+                if (node is UAVariable v)
+                    CollectDependentNamespace(v.DataType, modelUri, nodeNs, result);
+                if (node is UAVariableType vt)
+                    CollectDependentNamespace(vt.DataType, modelUri, nodeNs, result);
+
+                if (node.References != null)
+                    foreach (var r in node.References)
+                        CollectDependentNamespace(r.ReferenceTypeId, modelUri, nodeNs, result);
+
+                if (node.Children != null)
+                    CollectChildrenDependencies(node.Children, modelUri, nodeIds, result);
+            }
+
+            if (children.Objects != null)
+                foreach (var child in children.Objects) Check(child);
+            if (children.Variables != null)
+                foreach (var child in children.Variables) Check(child);
+            if (children.Methods != null)
+                foreach (var child in children.Methods) Check(child);
+        }
+
 
         #endregion
 
@@ -513,6 +909,93 @@ namespace Opc.Ua.JsonNodeSet
                 foreach (var child in children.Methods)
                     AddNodeInternal(child, parentNodeId);
             }
+        }
+
+        public void AddReference(string sourceNodeId, string referenceTypeId, string targetNodeId, bool isForward)
+        {
+            if (!_nodes.TryGetValue(sourceNodeId, out var sourceNode))
+                throw new KeyNotFoundException($"Source node '{sourceNodeId}' not found.");
+
+            // Add to the UANode.References list (for serialization)
+            sourceNode.References ??= new List<Reference>();
+            sourceNode.References.Add(new Reference
+            {
+                ReferenceTypeId = referenceTypeId,
+                TargetId = targetNodeId,
+                IsForward = isForward,
+            });
+
+            // Index in forward/inverse dictionaries
+            var entry = new ReferenceEntry
+            {
+                SourceNodeId = sourceNodeId,
+                ReferenceTypeId = referenceTypeId,
+                TargetNodeId = targetNodeId,
+                IsForward = isForward,
+            };
+
+            if (isForward)
+            {
+                AddIfNotDuplicate(_forwardRefs, sourceNodeId, entry);
+                AddIfNotDuplicate(_inverseRefs, targetNodeId, new ReferenceEntry
+                {
+                    SourceNodeId = targetNodeId,
+                    ReferenceTypeId = referenceTypeId,
+                    TargetNodeId = sourceNodeId,
+                    IsForward = false,
+                });
+            }
+            else
+            {
+                AddIfNotDuplicate(_inverseRefs, sourceNodeId, entry);
+                AddIfNotDuplicate(_forwardRefs, targetNodeId, new ReferenceEntry
+                {
+                    SourceNodeId = targetNodeId,
+                    ReferenceTypeId = referenceTypeId,
+                    TargetNodeId = sourceNodeId,
+                    IsForward = true,
+                });
+            }
+
+            InvalidateSupertypeCache();
+        }
+
+        public bool RemoveReference(string sourceNodeId, string referenceTypeId, string targetNodeId, bool isForward)
+        {
+            if (!_nodes.TryGetValue(sourceNodeId, out var sourceNode))
+                return false;
+
+            // Remove from UANode.References
+            sourceNode.References?.RemoveAll(r =>
+                r.ReferenceTypeId == referenceTypeId &&
+                r.TargetId == targetNodeId &&
+                (r.IsForward ?? true) == isForward);
+
+            // Remove from index
+            if (isForward)
+            {
+                RemoveFromRefDict(_forwardRefs, sourceNodeId, referenceTypeId, targetNodeId, true);
+                RemoveFromRefDict(_inverseRefs, targetNodeId, referenceTypeId, sourceNodeId, false);
+            }
+            else
+            {
+                RemoveFromRefDict(_inverseRefs, sourceNodeId, referenceTypeId, targetNodeId, false);
+                RemoveFromRefDict(_forwardRefs, targetNodeId, referenceTypeId, sourceNodeId, true);
+            }
+
+            InvalidateSupertypeCache();
+            return true;
+        }
+
+        private static void RemoveFromRefDict(Dictionary<string, List<ReferenceEntry>> dict, string key,
+            string referenceTypeId, string targetNodeId, bool isForward)
+        {
+            if (!dict.TryGetValue(key, out var list)) return;
+            list.RemoveAll(e =>
+                e.ReferenceTypeId == referenceTypeId &&
+                e.TargetNodeId == targetNodeId &&
+                e.IsForward == isForward);
+            if (list.Count == 0) dict.Remove(key);
         }
 
         #endregion
