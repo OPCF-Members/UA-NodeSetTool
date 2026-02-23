@@ -196,6 +196,188 @@ namespace Opc.Ua.JsonNodeSet
             return false;
         }
 
+        public (UANodeSet NodeSet, List<UANode> Stubs) GetNodeSetWithStubs(string modelUri)
+        {
+            var nodeSet = GetNodeSet(modelUri);
+            var stubs = new List<UANode>();
+            var stubIds = new HashSet<string>();
+
+            // Collect all model node IDs (top-level + children)
+            var modelNodeIds = new HashSet<string>();
+            void CollectIds(IEnumerable<UANode>? nodes)
+            {
+                if (nodes == null) return;
+                foreach (var n in nodes)
+                {
+                    if (n.NodeId != null) modelNodeIds.Add(n.NodeId);
+                    CollectChildNodeIds(n, modelNodeIds);
+                }
+            }
+            CollectIds(nodeSet.Nodes?.N1ReferenceTypes);
+            CollectIds(nodeSet.Nodes?.N2DataTypes);
+            CollectIds(nodeSet.Nodes?.N3VariableTypes);
+            CollectIds(nodeSet.Nodes?.N4ObjectTypes);
+            CollectIds(nodeSet.Nodes?.N5Variables);
+            CollectIds(nodeSet.Nodes?.N6Methods);
+            CollectIds(nodeSet.Nodes?.N7Objects);
+            CollectIds(nodeSet.Nodes?.N8Views);
+
+            // Collect all external NodeId references
+            var externalIds = new HashSet<string>();
+            void WalkNodes(IEnumerable<UANode>? nodes)
+            {
+                if (nodes == null) return;
+                foreach (var n in nodes)
+                    CollectExternalRefsFromNode(n, modelNodeIds, externalIds);
+            }
+            WalkNodes(nodeSet.Nodes?.N1ReferenceTypes);
+            WalkNodes(nodeSet.Nodes?.N2DataTypes);
+            WalkNodes(nodeSet.Nodes?.N3VariableTypes);
+            WalkNodes(nodeSet.Nodes?.N4ObjectTypes);
+            WalkNodes(nodeSet.Nodes?.N5Variables);
+            WalkNodes(nodeSet.Nodes?.N6Methods);
+            WalkNodes(nodeSet.Nodes?.N7Objects);
+            WalkNodes(nodeSet.Nodes?.N8Views);
+
+            // Create stubs and chase supertypes via BFS
+            var toProcess = new Queue<string>(externalIds);
+            while (toProcess.Count > 0)
+            {
+                var id = toProcess.Dequeue();
+                if (stubIds.Contains(id) || modelNodeIds.Contains(id)) continue;
+
+                var stub = CreateStubNode(id);
+                stubs.Add(stub);
+                stubIds.Add(id);
+
+                // Chase supertype: if stub has an inverse HasSubtype, enqueue the target
+                if (stub.References != null)
+                {
+                    foreach (var r in stub.References)
+                    {
+                        if (r.ReferenceTypeId == HasSubtypeId && !(r.IsForward ?? true))
+                        {
+                            if (r.TargetId != null && !stubIds.Contains(r.TargetId) && !modelNodeIds.Contains(r.TargetId))
+                                toProcess.Enqueue(r.TargetId);
+                        }
+                    }
+                }
+            }
+
+            return (nodeSet, stubs);
+        }
+
+        private static void CollectChildNodeIds(UANode node, HashSet<string> ids)
+        {
+            if (node.Children == null) return;
+            void Collect(IEnumerable<UANode>? children)
+            {
+                if (children == null) return;
+                foreach (var c in children)
+                {
+                    if (c.NodeId != null) ids.Add(c.NodeId);
+                    CollectChildNodeIds(c, ids);
+                }
+            }
+            Collect(node.Children.Objects);
+            Collect(node.Children.Variables);
+            Collect(node.Children.Methods);
+        }
+
+        private static void CollectExternalRefsFromNode(UANode node, HashSet<string> modelNodeIds, HashSet<string> externalIds)
+        {
+            void AddIfExternal(string? nodeId)
+            {
+                if (nodeId != null && !modelNodeIds.Contains(nodeId))
+                    externalIds.Add(nodeId);
+            }
+
+            AddIfExternal(node.TypeId);
+            AddIfExternal(node.ModellingRuleId);
+
+            if (node is UAVariable v) AddIfExternal(v.DataType);
+            if (node is UAVariableType vt) AddIfExternal(vt.DataType);
+
+            if (node.References != null)
+                foreach (var r in node.References)
+                    AddIfExternal(r.TargetId);
+
+            if (node.RolePermissions != null)
+                foreach (var rp in node.RolePermissions)
+                    AddIfExternal(rp.RoleId);
+
+            if (node is UADataType dt && dt.Definition?.Fields != null)
+                foreach (var f in dt.Definition.Fields)
+                    AddIfExternal(f.DataType);
+
+            if (node.Children != null)
+            {
+                void WalkChildren(IEnumerable<UANode>? children)
+                {
+                    if (children == null) return;
+                    foreach (var c in children)
+                        CollectExternalRefsFromNode(c, modelNodeIds, externalIds);
+                }
+                WalkChildren(node.Children.Objects);
+                WalkChildren(node.Children.Variables);
+                WalkChildren(node.Children.Methods);
+            }
+        }
+
+        private UANode CreateStubNode(string nodeId)
+        {
+            if (_nodes.TryGetValue(nodeId, out var existing))
+            {
+                UANode stub = existing switch
+                {
+                    UADataType => new UADataType { NodeClass = NodeClass.UADataType },
+                    UAObjectType => new UAObjectType { NodeClass = NodeClass.UAObjectType },
+                    UAVariableType => new UAVariableType { NodeClass = NodeClass.UAVariableType },
+                    UAReferenceType => new UAReferenceType { NodeClass = NodeClass.UAReferenceType },
+                    UAVariable => new UAVariable { NodeClass = NodeClass.UAVariable },
+                    UAMethod => new UAMethod { NodeClass = NodeClass.UAMethod },
+                    UAView => new UAView { NodeClass = NodeClass.UAView },
+                    _ => new UAObject { NodeClass = NodeClass.UAObject }
+                };
+
+                stub.NodeId = nodeId;
+                stub.BrowseName = existing.BrowseName;
+
+                // Include supertype reference if this node has one
+                if (_inverseRefs.TryGetValue(nodeId, out var invRefs))
+                {
+                    foreach (var entry in invRefs)
+                    {
+                        if (entry.ReferenceTypeId == HasSubtypeId)
+                        {
+                            stub.References = new List<Reference>
+                            {
+                                new Reference
+                                {
+                                    ReferenceTypeId = HasSubtypeId,
+                                    IsForward = false,
+                                    TargetId = entry.TargetNodeId
+                                }
+                            };
+                            break;
+                        }
+                    }
+                }
+
+                return stub;
+            }
+            else
+            {
+                // Unknown node — emit minimal stub
+                return new UAObject
+                {
+                    NodeId = nodeId,
+                    NodeClass = NodeClass.UAObject,
+                    BrowseName = nodeId
+                };
+            }
+        }
+
         public UANodeSet GetNodeSet(string modelUri)
         {
             var nodeSet = new UANodeSet();
@@ -230,6 +412,13 @@ namespace Opc.Ua.JsonNodeSet
             foreach (var node in _sequence)
             {
                 if (node.NodeId == null) continue;
+
+                // exclude nodes with parents.
+                if (node.ParentId != null)
+                {
+                    continue;
+                }
+
                 // Core namespace nodes may be stored without nsu= prefix (e.g. "i=123")
                 if (node.NodeId.StartsWith(prefix)
                     || (isCoreNamespace && !node.NodeId.StartsWith(NsuPrefix)))

@@ -1,0 +1,1428 @@
+{
+  "@context": {
+    "opcua": "http://opcfoundation.org/UA/",
+    "dm": "urn:opcfoundation.org:2024-01:DemoModel/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+
+    "browseName": "opcua:BrowseName",
+    "symbolicName": "opcua:SymbolicName",
+    "description": "rdfs:comment",
+    "releaseStatus": "opcua:ReleaseStatus",
+    "valueRank": { "@id": "opcua:ValueRank", "@type": "xsd:integer" },
+    "arrayDimensions": "opcua:ArrayDimensions",
+    "accessRestrictions": { "@id": "opcua:AccessRestrictions", "@type": "xsd:integer" },
+    "isUnion": { "@id": "opcua:IsUnion", "@type": "xsd:boolean" },
+    "isOptional": { "@id": "opcua:IsOptional", "@type": "xsd:boolean" },
+    "allowSubTypes": { "@id": "opcua:AllowSubTypes", "@type": "xsd:boolean" },
+
+    "dataType": { "@id": "opcua:HasDataType", "@type": "@id" },
+    "typeDefinition": { "@id": "opcua:HasTypeDefinition", "@type": "@id" },
+    "parent": { "@id": "opcua:HasParent", "@type": "@id" },
+    "modellingRule": { "@id": "opcua:HasModellingRule", "@type": "@id" },
+
+    "HasSubtype": { "@id": "opcua:HasSubtype", "@type": "@id" },
+    "HasProperty": { "@id": "opcua:HasProperty", "@type": "@id" },
+    "HasComponent": { "@id": "opcua:HasComponent", "@type": "@id" },
+    "Organizes": { "@id": "opcua:Organizes", "@type": "@id" },
+    "HasEncoding": { "@id": "opcua:HasEncoding", "@type": "@id" },
+    "HasDescription": { "@id": "opcua:HasDescription", "@type": "@id" },
+    "HasOrderedComponent": { "@id": "opcua:HasOrderedComponent", "@type": "@id" },
+
+    "SubtypeOf": { "@id": "opcua:SubtypeOf", "@type": "@id" },
+    "PropertyOf": { "@id": "opcua:PropertyOf", "@type": "@id" },
+    "ComponentOf": { "@id": "opcua:ComponentOf", "@type": "@id" },
+    "OrganizedBy": { "@id": "opcua:OrganizedBy", "@type": "@id" },
+    "EncodingOf": { "@id": "opcua:EncodingOf", "@type": "@id" },
+    "OrderedComponentOf": { "@id": "opcua:OrderedComponentOf", "@type": "@id" },
+
+    "definition": "opcua:HasDefinition",
+    "fields": "opcua:HasField",
+    "fieldName": "opcua:FieldName",
+    "fieldValue": { "@id": "opcua:FieldValue", "@type": "xsd:integer" },
+    "fieldDataType": { "@id": "opcua:FieldDataType", "@type": "@id" },
+    "rolePermissions": "opcua:RolePermissions",
+    "roleId": { "@id": "opcua:RoleId", "@type": "@id" },
+    "permissions": { "@id": "opcua:Permissions", "@type": "xsd:integer" },
+    "modelUri": { "@id": "opcua:ModelUri", "@type": "@id" },
+    "version": "opcua:Version",
+    "modelVersion": "opcua:ModelVersion",
+    "publicationDate": { "@id": "opcua:PublicationDate", "@type": "xsd:dateTime" },
+    "xmlSchemaUri": { "@id": "opcua:XmlSchemaUri", "@type": "@id" },
+    "requiredModels": "opcua:RequiredModels",
+    "isExternalReference": { "@id": "opcua:IsExternalReference", "@type": "xsd:boolean" }
+  },
+
+  "@id": "urn:opcfoundation.org:2024-01:DemoModel",
+  "@type": "opcua:UANodeSet",
+  "modelUri": "urn:opcfoundation.org:2024-01:DemoModel",
+  "xmlSchemaUri": "urn:opcfoundation.org:2024-01:DemoModelTypes.xsd",
+  "version": "1.05.03",
+  "modelVersion": "1.5.3",
+  "publicationDate": "2023-12-15T00:00:00Z",
+  "requiredModels": [
+    {
+      "modelUri": "http://opcfoundation.org/UA/",
+      "xmlSchemaUri": "http://opcfoundation.org/UA/2008/02/Types.xsd"
+    }
+  ],
+
+  "@graph": [
+
+    {
+      "@id": "dm:i=68",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;EnumUnderscoreTest",
+      "SubtypeOf": "opcua:i=29",
+      "HasProperty": "dm:i=69",
+      "definition": {
+        "isUnion": false,
+        "fields": [
+          { "fieldName": "x_x", "fieldValue": 1 },
+          { "fieldName": "_x", "fieldValue": 2 },
+          { "fieldName": "x_", "fieldValue": 3 },
+          { "fieldName": "_", "fieldValue": 4 },
+          { "fieldName": "Test5", "fieldValue": -1 }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=69",
+      "@type": "opcua:UAVariable",
+      "browseName": "EnumValues",
+      "dataType": "opcua:i=7594",
+      "valueRank": 1,
+      "arrayDimensions": "5",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=68",
+      "PropertyOf": "dm:i=68"
+    },
+
+    {
+      "@id": "dm:i=1",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;HeaterStatus",
+      "SubtypeOf": "opcua:i=29",
+      "HasProperty": "dm:i=2",
+      "definition": {
+        "fields": [
+          { "fieldName": "Off", "fieldValue": 0 },
+          { "fieldName": "Heating", "fieldValue": 1 },
+          { "fieldName": "Cooling", "fieldValue": 2 }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=2",
+      "@type": "opcua:UAVariable",
+      "browseName": "EnumStrings",
+      "dataType": "opcua:i=21",
+      "valueRank": 1,
+      "arrayDimensions": "3",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=1",
+      "PropertyOf": "dm:i=1"
+    },
+
+    {
+      "@id": "dm:i=3",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Vector",
+      "SubtypeOf": "opcua:i=22",
+      "definition": {
+        "fields": [
+          { "fieldName": "X", "fieldDataType": "opcua:i=11" },
+          { "fieldName": "Y", "fieldDataType": "opcua:i=11" },
+          { "fieldName": "Z", "fieldDataType": "opcua:i=11" }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=4",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;WorkOrderStatusType",
+      "SubtypeOf": "opcua:i=22",
+      "definition": {
+        "fields": [
+          { "fieldName": "Actor", "fieldDataType": "opcua:i=12" },
+          { "fieldName": "Timestamp", "fieldDataType": "opcua:i=13" },
+          { "fieldName": "Comment", "fieldDataType": "opcua:i=21" }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=5",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;WorkOrderType",
+      "SubtypeOf": "opcua:i=22",
+      "definition": {
+        "fields": [
+          { "fieldName": "ID", "fieldDataType": "opcua:i=14" },
+          { "fieldName": "AssetID", "fieldDataType": "opcua:i=12" },
+          { "fieldName": "StartTime", "fieldDataType": "opcua:i=13" },
+          { "fieldName": "StatusComments", "fieldDataType": "dm:i=4", "valueRank": 1 }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=322",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;ExtendedWorkOrderType",
+      "SubtypeOf": "dm:i=5",
+      "definition": {
+        "fields": [
+          { "fieldName": "ContactX", "fieldDataType": "opcua:i=7" },
+          { "fieldName": "ContactY", "fieldDataType": "opcua:i=12", "valueRank": 1, "isOptional": true },
+          { "fieldName": "ContactZ", "fieldDataType": "opcua:i=15", "isOptional": true }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=354",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;PenultimateWorkOrderType",
+      "SubtypeOf": "dm:i=322",
+      "definition": {
+        "fields": [
+          { "fieldName": "Address", "fieldDataType": "opcua:i=12" }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=332",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;FinalWorkOrderType",
+      "SubtypeOf": "dm:i=354",
+      "definition": {
+        "fields": [
+          { "fieldName": "Phone", "fieldDataType": "opcua:i=12", "isOptional": true },
+          { "fieldName": "Email", "fieldDataType": "opcua:i=12" }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=41",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleUnion",
+      "SubtypeOf": "opcua:i=12756",
+      "definition": {
+        "isUnion": true,
+        "fields": [
+          { "fieldName": "FieldX", "fieldDataType": "opcua:i=7" },
+          { "fieldName": "FieldY", "fieldDataType": "opcua:i=12", "valueRank": 1 },
+          { "fieldName": "FieldZ", "fieldDataType": "opcua:i=15" }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=42",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleStructureWithOptionalFields",
+      "SubtypeOf": "opcua:i=22",
+      "definition": {
+        "fields": [
+          { "fieldName": "FieldX", "fieldDataType": "opcua:i=7" },
+          { "fieldName": "FieldY", "fieldDataType": "opcua:i=12", "valueRank": 1, "isOptional": true },
+          { "fieldName": "FieldZ", "fieldDataType": "opcua:i=15", "isOptional": true }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=43",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleUnionAllowSubtypes",
+      "SubtypeOf": "opcua:i=12756",
+      "definition": {
+        "isUnion": true,
+        "fields": [
+          { "fieldName": "FieldX", "fieldDataType": "dm:i=5", "allowSubTypes": true },
+          { "fieldName": "FieldY", "fieldDataType": "dm:i=4" }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=44",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleStructureAllowSubtypes",
+      "SubtypeOf": "opcua:i=22",
+      "definition": {
+        "fields": [
+          { "fieldName": "FieldX", "fieldDataType": "dm:i=3", "allowSubTypes": true },
+          { "fieldName": "FieldY", "fieldDataType": "dm:i=3", "valueRank": 1, "allowSubTypes": true },
+          { "fieldName": "FieldZ", "fieldDataType": "dm:i=3", "valueRank": -2, "allowSubTypes": true },
+          { "fieldName": "FieldW", "fieldDataType": "dm:i=4" }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=222",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Person",
+      "SubtypeOf": "opcua:i=22",
+      "definition": {
+        "fields": [
+          { "fieldName": "LastName", "fieldDataType": "opcua:i=12", "isOptional": true }
+        ]
+      }
+    },
+    {
+      "@id": "dm:i=223",
+      "@type": "opcua:UADataType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Student",
+      "SubtypeOf": "dm:i=222",
+      "definition": {
+        "fields": [
+          { "fieldName": "FirstName", "fieldDataType": "opcua:i=12", "isOptional": true },
+          { "fieldName": "University", "fieldDataType": "opcua:i=12", "isOptional": true }
+        ]
+      }
+    },
+
+
+    {
+      "@id": "dm:i=122",
+      "@type": "opcua:UAVariableType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;RestrictedVariableType",
+      "dataType": "opcua:i=12",
+      "valueRank": -2,
+      "SubtypeOf": "opcua:i=63",
+      "HasComponent": [ "dm:i=123", "dm:i=210", "dm:i=211", "dm:i=212" ]
+    },
+    {
+      "@id": "dm:i=123",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Yellow",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=122",
+      "ComponentOf": "dm:i=122"
+    },
+    {
+      "@id": "dm:i=210",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;X",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=122",
+      "ComponentOf": "dm:i=122"
+    },
+    {
+      "@id": "dm:i=211",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Y",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=122",
+      "ComponentOf": "dm:i=122"
+    },
+    {
+      "@id": "dm:i=212",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Z",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=122",
+      "ComponentOf": "dm:i=122"
+    },
+
+    {
+      "@id": "dm:i=345",
+      "@type": "opcua:UAVariableType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;YellowType",
+      "dataType": "opcua:i=12",
+      "valueRank": -2,
+      "SubtypeOf": "opcua:i=63",
+      "HasProperty": [ "dm:i=346", "dm:i=347" ]
+    },
+    {
+      "@id": "dm:i=346",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Shade",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=345",
+      "PropertyOf": "dm:i=345"
+    },
+    {
+      "@id": "dm:i=347",
+      "@type": "opcua:UAVariable",
+      "browseName": "DefaultInstanceBrowseName",
+      "dataType": "opcua:i=20",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=345",
+      "PropertyOf": "dm:i=345"
+    },
+
+
+    {
+      "@id": "dm:i=124",
+      "@type": "opcua:UAObjectType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;RestrictedObjectType",
+      "SubtypeOf": "opcua:i=58",
+      "HasComponent": [ "dm:i=125", "dm:i=132", "dm:i=342" ]
+    },
+    {
+      "@id": "dm:i=125",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Red",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "dm:i=122",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=124",
+      "ComponentOf": "dm:i=124",
+      "HasComponent": [ "dm:i=57", "dm:i=213", "dm:i=214", "dm:i=215" ]
+    },
+    {
+      "@id": "dm:i=57",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Yellow",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=125",
+      "ComponentOf": "dm:i=125"
+    },
+    {
+      "@id": "dm:i=213",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;X",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=125",
+      "ComponentOf": "dm:i=125"
+    },
+    {
+      "@id": "dm:i=214",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Y",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=125",
+      "ComponentOf": "dm:i=125"
+    },
+    {
+      "@id": "dm:i=215",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Z",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=125",
+      "ComponentOf": "dm:i=125"
+    },
+    {
+      "@id": "dm:i=132",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;<Pink>",
+      "symbolicName": "Pink_Placeholder",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "dm:i=122",
+      "modellingRule": "opcua:i=11508",
+      "parent": "dm:i=124",
+      "ComponentOf": "dm:i=124",
+      "HasComponent": [ "dm:i=58", "dm:i=216", "dm:i=217", "dm:i=218" ]
+    },
+    {
+      "@id": "dm:i=58",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Yellow",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=132",
+      "ComponentOf": "dm:i=132"
+    },
+    {
+      "@id": "dm:i=216",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;X",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=132",
+      "ComponentOf": "dm:i=132"
+    },
+    {
+      "@id": "dm:i=217",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Y",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=132",
+      "ComponentOf": "dm:i=132"
+    },
+    {
+      "@id": "dm:i=218",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Z",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=132",
+      "ComponentOf": "dm:i=132"
+    },
+    {
+      "@id": "dm:i=342",
+      "@type": "opcua:UAMethod",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;BlueType",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=124",
+      "ComponentOf": "dm:i=124"
+    },
+
+    {
+      "@id": "dm:i=364",
+      "@type": "opcua:UAObjectType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;BrightnessType",
+      "SubtypeOf": "opcua:i=58",
+      "HasOrderedComponent": "dm:i=365",
+      "Organizes": "dm:i=367"
+    },
+    {
+      "@id": "dm:i=365",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;<Amber>",
+      "symbolicName": "Amber_Placeholder",
+      "typeDefinition": "opcua:i=2307",
+      "modellingRule": "opcua:i=11510",
+      "parent": "dm:i=364",
+      "OrderedComponentOf": "dm:i=364",
+      "HasProperty": "dm:i=366"
+    },
+    {
+      "@id": "dm:i=366",
+      "@type": "opcua:UAVariable",
+      "browseName": "StateNumber",
+      "dataType": "opcua:i=7",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=365",
+      "PropertyOf": "dm:i=365"
+    },
+    {
+      "@id": "dm:i=367",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;<Green>",
+      "symbolicName": "Green_Placeholder",
+      "typeDefinition": "opcua:i=2299",
+      "modellingRule": "opcua:i=11508",
+      "parent": "dm:i=364",
+      "OrganizedBy": "dm:i=364",
+      "HasComponent": "dm:i=368"
+    },
+    {
+      "@id": "dm:i=368",
+      "@type": "opcua:UAVariable",
+      "browseName": "CurrentState",
+      "dataType": "opcua:i=21",
+      "typeDefinition": "opcua:i=2755",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=367",
+      "ComponentOf": "dm:i=367",
+      "HasProperty": "dm:i=369"
+    },
+    {
+      "@id": "dm:i=369",
+      "@type": "opcua:UAVariable",
+      "browseName": "Id",
+      "dataType": "opcua:i=24",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=368",
+      "PropertyOf": "dm:i=368"
+    },
+
+    {
+      "@id": "dm:i=348",
+      "@type": "opcua:UAObjectType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;PictureType",
+      "SubtypeOf": "opcua:i=58",
+      "HasProperty": "dm:i=349",
+      "HasComponent": "dm:i=380"
+    },
+    {
+      "@id": "dm:i=380",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;<Indigo>",
+      "symbolicName": "Indigo_Placeholder",
+      "typeDefinition": "dm:i=364",
+      "modellingRule": "opcua:i=11510",
+      "parent": "dm:i=348",
+      "ComponentOf": "dm:i=348",
+      "HasOrderedComponent": "dm:i=365"
+    },
+    {
+      "@id": "dm:i=349",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;YellowThing",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "dm:i=345",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=348",
+      "PropertyOf": "dm:i=348",
+      "HasProperty": "dm:i=350"
+    },
+    {
+      "@id": "dm:i=350",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Shade",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=68",
+      "modellingRule": "opcua:i=78",
+      "parent": "dm:i=349",
+      "PropertyOf": "dm:i=349"
+    },
+
+    {
+      "@id": "dm:i=120",
+      "@type": "opcua:UAObjectType",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;WithTwoDimensionalVariableType",
+      "SubtypeOf": "opcua:i=58",
+      "HasComponent": "dm:i=121"
+    },
+    {
+      "@id": "dm:i=121",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;X",
+      "dataType": "opcua:i=6",
+      "valueRank": 2,
+      "arrayDimensions": "0,0",
+      "typeDefinition": "opcua:i=63",
+      "modellingRule": "opcua:i=80",
+      "parent": "dm:i=120",
+      "ComponentOf": "dm:i=120"
+    },
+
+
+    {
+      "@id": "dm:i=24",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;DemoModel",
+      "symbolicName": "DemoModel_BinarySchema",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=15",
+      "typeDefinition": "opcua:i=72",
+      "ComponentOf": "opcua:i=93",
+      "HasProperty": [ "dm:i=26", "dm:i=49" ],
+      "HasComponent": [ "dm:i=27", "dm:i=30", "dm:i=33", "dm:i=324", "dm:i=356", "dm:i=334", "dm:i=50", "dm:i=53", "dm:i=56", "dm:i=59", "dm:i=226", "dm:i=229" ]
+    },
+    {
+      "@id": "dm:i=26",
+      "@type": "opcua:UAVariable",
+      "browseName": "NamespaceUri",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=24",
+      "PropertyOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=49",
+      "@type": "opcua:UAVariable",
+      "browseName": "Deprecated",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=1",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=24",
+      "PropertyOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=27",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Vector",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=30",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;WorkOrderStatusType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=33",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;WorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=324",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;ExtendedWorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=356",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;PenultimateWorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=334",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;FinalWorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=50",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleUnion",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=53",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleStructureWithOptionalFields",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=56",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleUnionAllowSubtypes",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=59",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleStructureAllowSubtypes",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=226",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Person",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+    {
+      "@id": "dm:i=229",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Student",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=24",
+      "ComponentOf": "dm:i=24"
+    },
+
+    {
+      "@id": "dm:i=9",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;DemoModel",
+      "symbolicName": "DemoModel_XmlSchema",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=15",
+      "typeDefinition": "opcua:i=72",
+      "ComponentOf": "opcua:i=92",
+      "HasProperty": [ "dm:i=11", "dm:i=66" ],
+      "HasComponent": [ "dm:i=12", "dm:i=15", "dm:i=18", "dm:i=328", "dm:i=360", "dm:i=338", "dm:i=67", "dm:i=70", "dm:i=73", "dm:i=76", "dm:i=234", "dm:i=237" ]
+    },
+    {
+      "@id": "dm:i=11",
+      "@type": "opcua:UAVariable",
+      "browseName": "NamespaceUri",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=9",
+      "PropertyOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=66",
+      "@type": "opcua:UAVariable",
+      "browseName": "Deprecated",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=1",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=9",
+      "PropertyOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=12",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Vector",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=15",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;WorkOrderStatusType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=18",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;WorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=328",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;ExtendedWorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=360",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;PenultimateWorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=338",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;FinalWorkOrderType",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=67",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleUnion",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=70",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleStructureWithOptionalFields",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=73",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleUnionAllowSubtypes",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=76",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;SampleStructureAllowSubtypes",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=234",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Person",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+    {
+      "@id": "dm:i=237",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Student",
+      "releaseStatus": "Deprecated",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=69",
+      "parent": "dm:i=9",
+      "ComponentOf": "dm:i=9"
+    },
+
+
+    {
+      "@id": "dm:i=95",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Seeker",
+      "description": "The Role is a test role.",
+      "typeDefinition": "opcua:i=15620",
+      "ComponentOf": "opcua:i=15606",
+      "HasProperty": "dm:i=10"
+    },
+    {
+      "@id": "dm:i=10",
+      "@type": "opcua:UAVariable",
+      "browseName": "Identities",
+      "dataType": "opcua:i=15634",
+      "valueRank": 1,
+      "arrayDimensions": "0",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=95",
+      "PropertyOf": "dm:i=95",
+      "accessRestrictions": 3,
+      "rolePermissions": [
+        { "roleId": "opcua:i=15704", "permissions": 59391 }
+      ]
+    },
+
+    {
+      "@id": "dm:i=128",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;TestObject",
+      "typeDefinition": "dm:i=124",
+      "rolePermissions": [
+        { "roleId": "opcua:i=15656", "permissions": 4097 }
+      ],
+      "HasComponent": [ "dm:i=60", "dm:i=343" ]
+    },
+    {
+      "@id": "dm:i=60",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Red",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "dm:i=122",
+      "parent": "dm:i=128",
+      "ComponentOf": "dm:i=128",
+      "accessRestrictions": 3,
+      "rolePermissions": [
+        { "roleId": "opcua:i=15704", "permissions": 97 }
+      ],
+      "HasComponent": [ "dm:i=61", "dm:i=219", "dm:i=220", "dm:i=221" ]
+    },
+    {
+      "@id": "dm:i=61",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Yellow",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=60",
+      "ComponentOf": "dm:i=60",
+      "accessRestrictions": 5,
+      "rolePermissions": [
+        { "roleId": "dm:i=95", "permissions": 33 }
+      ]
+    },
+    {
+      "@id": "dm:i=219",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;X",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=60",
+      "ComponentOf": "dm:i=60",
+      "accessRestrictions": 3,
+      "rolePermissions": [
+        { "roleId": "opcua:i=15704", "permissions": 97 }
+      ]
+    },
+    {
+      "@id": "dm:i=220",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Y",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=60",
+      "ComponentOf": "dm:i=60",
+      "accessRestrictions": 3,
+      "rolePermissions": [
+        { "roleId": "opcua:i=15704", "permissions": 97 }
+      ]
+    },
+    {
+      "@id": "dm:i=221",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Z",
+      "dataType": "opcua:i=6",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=60",
+      "ComponentOf": "dm:i=60",
+      "accessRestrictions": 3,
+      "rolePermissions": [
+        { "roleId": "opcua:i=15704", "permissions": 97 }
+      ]
+    },
+    {
+      "@id": "dm:i=343",
+      "@type": "opcua:UAMethod",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;BlueType",
+      "parent": "dm:i=128",
+      "ComponentOf": "dm:i=128",
+      "accessRestrictions": 13,
+      "rolePermissions": [
+        { "roleId": "opcua:i=15704", "permissions": 4097 }
+      ]
+    },
+
+    {
+      "@id": "dm:i=93",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Test_Error",
+      "typeDefinition": "opcua:i=58"
+    },
+    {
+      "@id": "dm:i=94",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Test_ErrorComponent",
+      "typeDefinition": "opcua:i=58",
+      "ComponentOf": "dm:i=93"
+    },
+
+    {
+      "@id": "dm:i=351",
+      "@type": "opcua:UAObject",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Picture",
+      "typeDefinition": "dm:i=348",
+      "OrganizedBy": "opcua:i=85",
+      "HasProperty": "dm:i=352"
+    },
+    {
+      "@id": "dm:i=352",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;YellowThing",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "dm:i=345",
+      "parent": "dm:i=351",
+      "PropertyOf": "dm:i=351",
+      "HasProperty": "dm:i=353"
+    },
+    {
+      "@id": "dm:i=353",
+      "@type": "opcua:UAVariable",
+      "browseName": "nsu=urn:opcfoundation.org:2024-01:DemoModel;Shade",
+      "dataType": "opcua:i=12",
+      "typeDefinition": "opcua:i=68",
+      "parent": "dm:i=352",
+      "PropertyOf": "dm:i=352"
+    },
+
+
+    {
+      "@id": "dm:i=21",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=3",
+      "HasDescription": "dm:i=27"
+    },
+    {
+      "@id": "dm:i=22",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=4",
+      "HasDescription": "dm:i=30"
+    },
+    {
+      "@id": "dm:i=23",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=5",
+      "HasDescription": "dm:i=33"
+    },
+    {
+      "@id": "dm:i=323",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=322",
+      "HasDescription": "dm:i=324"
+    },
+    {
+      "@id": "dm:i=355",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=354",
+      "HasDescription": "dm:i=356"
+    },
+    {
+      "@id": "dm:i=333",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=332",
+      "HasDescription": "dm:i=334"
+    },
+    {
+      "@id": "dm:i=45",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=41",
+      "HasDescription": "dm:i=50"
+    },
+    {
+      "@id": "dm:i=46",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=42",
+      "HasDescription": "dm:i=53"
+    },
+    {
+      "@id": "dm:i=47",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=43",
+      "HasDescription": "dm:i=56"
+    },
+    {
+      "@id": "dm:i=48",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=44",
+      "HasDescription": "dm:i=59"
+    },
+    {
+      "@id": "dm:i=224",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=222",
+      "HasDescription": "dm:i=226"
+    },
+    {
+      "@id": "dm:i=225",
+      "@type": "opcua:UAObject",
+      "browseName": "Default Binary",
+      "symbolicName": "DefaultBinary",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=223",
+      "HasDescription": "dm:i=229"
+    },
+
+    {
+      "@id": "dm:i=6",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=3",
+      "HasDescription": "dm:i=12"
+    },
+    {
+      "@id": "dm:i=7",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=4",
+      "HasDescription": "dm:i=15"
+    },
+    {
+      "@id": "dm:i=8",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=5",
+      "HasDescription": "dm:i=18"
+    },
+    {
+      "@id": "dm:i=327",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=322",
+      "HasDescription": "dm:i=328"
+    },
+    {
+      "@id": "dm:i=359",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=354",
+      "HasDescription": "dm:i=360"
+    },
+    {
+      "@id": "dm:i=337",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=332",
+      "HasDescription": "dm:i=338"
+    },
+    {
+      "@id": "dm:i=62",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=41",
+      "HasDescription": "dm:i=67"
+    },
+    {
+      "@id": "dm:i=63",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=42",
+      "HasDescription": "dm:i=70"
+    },
+    {
+      "@id": "dm:i=64",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=43",
+      "HasDescription": "dm:i=73"
+    },
+    {
+      "@id": "dm:i=65",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=44",
+      "HasDescription": "dm:i=76"
+    },
+    {
+      "@id": "dm:i=232",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=222",
+      "HasDescription": "dm:i=234"
+    },
+    {
+      "@id": "dm:i=233",
+      "@type": "opcua:UAObject",
+      "browseName": "Default XML",
+      "symbolicName": "DefaultXml",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=223",
+      "HasDescription": "dm:i=237"
+    },
+
+    {
+      "@id": "dm:i=79",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=3"
+    },
+    {
+      "@id": "dm:i=80",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=4"
+    },
+    {
+      "@id": "dm:i=81",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=5"
+    },
+    {
+      "@id": "dm:i=331",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=322"
+    },
+    {
+      "@id": "dm:i=363",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=354"
+    },
+    {
+      "@id": "dm:i=341",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=332"
+    },
+    {
+      "@id": "dm:i=82",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=41"
+    },
+    {
+      "@id": "dm:i=83",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=42"
+    },
+    {
+      "@id": "dm:i=84",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=43"
+    },
+    {
+      "@id": "dm:i=85",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=44"
+    },
+    {
+      "@id": "dm:i=240",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=222"
+    },
+    {
+      "@id": "dm:i=241",
+      "@type": "opcua:UAObject",
+      "browseName": "Default JSON",
+      "symbolicName": "DefaultJson",
+      "typeDefinition": "opcua:i=76",
+      "EncodingOf": "dm:i=223"
+    },
+
+
+    { "@id": "opcua:i=24", "@type": "opcua:UADataType", "browseName": "BaseDataType", "isExternalReference": true },
+    { "@id": "opcua:i=26", "@type": "opcua:UADataType", "browseName": "Number", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=27", "@type": "opcua:UADataType", "browseName": "Integer", "SubtypeOf": "opcua:i=26", "isExternalReference": true },
+    { "@id": "opcua:i=28", "@type": "opcua:UADataType", "browseName": "UInteger", "SubtypeOf": "opcua:i=26", "isExternalReference": true },
+    { "@id": "opcua:i=29", "@type": "opcua:UADataType", "browseName": "Enumeration", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=22", "@type": "opcua:UADataType", "browseName": "Structure", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=12756", "@type": "opcua:UADataType", "browseName": "Union", "SubtypeOf": "opcua:i=22", "isExternalReference": true },
+    { "@id": "opcua:i=7594", "@type": "opcua:UADataType", "browseName": "EnumValueType", "SubtypeOf": "opcua:i=22", "isExternalReference": true },
+    { "@id": "opcua:i=15634", "@type": "opcua:UADataType", "browseName": "IdentityMappingRuleType", "SubtypeOf": "opcua:i=22", "isExternalReference": true },
+    { "@id": "opcua:i=1", "@type": "opcua:UADataType", "browseName": "Boolean", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=6", "@type": "opcua:UADataType", "browseName": "Int32", "SubtypeOf": "opcua:i=27", "isExternalReference": true },
+    { "@id": "opcua:i=7", "@type": "opcua:UADataType", "browseName": "UInt32", "SubtypeOf": "opcua:i=28", "isExternalReference": true },
+    { "@id": "opcua:i=11", "@type": "opcua:UADataType", "browseName": "Double", "SubtypeOf": "opcua:i=26", "isExternalReference": true },
+    { "@id": "opcua:i=12", "@type": "opcua:UADataType", "browseName": "String", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=13", "@type": "opcua:UADataType", "browseName": "DateTime", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=14", "@type": "opcua:UADataType", "browseName": "Guid", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=15", "@type": "opcua:UADataType", "browseName": "ByteString", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=20", "@type": "opcua:UADataType", "browseName": "QualifiedName", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+    { "@id": "opcua:i=21", "@type": "opcua:UADataType", "browseName": "LocalizedText", "SubtypeOf": "opcua:i=24", "isExternalReference": true },
+
+    { "@id": "opcua:i=58", "@type": "opcua:UAObjectType", "browseName": "BaseObjectType", "isExternalReference": true },
+    { "@id": "opcua:i=76", "@type": "opcua:UAObjectType", "browseName": "DataTypeEncodingType", "SubtypeOf": "opcua:i=58", "isExternalReference": true },
+    { "@id": "opcua:i=2299", "@type": "opcua:UAObjectType", "browseName": "StateMachineType", "SubtypeOf": "opcua:i=58", "isExternalReference": true },
+    { "@id": "opcua:i=2307", "@type": "opcua:UAObjectType", "browseName": "StateType", "SubtypeOf": "opcua:i=58", "isExternalReference": true },
+    { "@id": "opcua:i=15620", "@type": "opcua:UAObjectType", "browseName": "RoleType", "SubtypeOf": "opcua:i=58", "isExternalReference": true },
+
+    { "@id": "opcua:i=62", "@type": "opcua:UAVariableType", "browseName": "BaseVariableType", "isExternalReference": true },
+    { "@id": "opcua:i=63", "@type": "opcua:UAVariableType", "browseName": "BaseDataVariableType", "SubtypeOf": "opcua:i=62", "isExternalReference": true },
+    { "@id": "opcua:i=68", "@type": "opcua:UAVariableType", "browseName": "PropertyType", "SubtypeOf": "opcua:i=62", "isExternalReference": true },
+    { "@id": "opcua:i=69", "@type": "opcua:UAVariableType", "browseName": "DataTypeDescriptionType", "SubtypeOf": "opcua:i=63", "isExternalReference": true },
+    { "@id": "opcua:i=72", "@type": "opcua:UAVariableType", "browseName": "DataTypeDictionaryType", "SubtypeOf": "opcua:i=63", "isExternalReference": true },
+    { "@id": "opcua:i=2755", "@type": "opcua:UAVariableType", "browseName": "StateVariableType", "SubtypeOf": "opcua:i=63", "isExternalReference": true },
+
+    { "@id": "opcua:i=78", "@type": "opcua:UAObject", "browseName": "Mandatory", "isExternalReference": true },
+    { "@id": "opcua:i=80", "@type": "opcua:UAObject", "browseName": "Optional", "isExternalReference": true },
+    { "@id": "opcua:i=11508", "@type": "opcua:UAObject", "browseName": "OptionalPlaceholder", "isExternalReference": true },
+    { "@id": "opcua:i=11510", "@type": "opcua:UAObject", "browseName": "MandatoryPlaceholder", "isExternalReference": true },
+    { "@id": "opcua:i=85", "@type": "opcua:UAObject", "browseName": "Objects", "isExternalReference": true },
+    { "@id": "opcua:i=92", "@type": "opcua:UAObject", "browseName": "XML Schema", "isExternalReference": true },
+    { "@id": "opcua:i=93", "@type": "opcua:UAObject", "browseName": "OPC Binary", "isExternalReference": true },
+    { "@id": "opcua:i=15606", "@type": "opcua:UAObject", "browseName": "RoleSet", "isExternalReference": true },
+    { "@id": "opcua:i=15656", "@type": "opcua:UAObject", "browseName": "AuthenticatedUser", "isExternalReference": true },
+    { "@id": "opcua:i=15704", "@type": "opcua:UAObject", "browseName": "SecurityAdmin", "isExternalReference": true }
+  ]
+}
