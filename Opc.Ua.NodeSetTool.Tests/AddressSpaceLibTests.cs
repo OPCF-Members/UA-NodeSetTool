@@ -611,8 +611,8 @@ namespace Opc.Ua.NodeSetTool.Tests
             var doc = JObject.Parse(File.ReadAllText(tempFile));
             var graph = (JArray)doc["@graph"]!;
 
-            // Find stubs (isExternalReference: true)
-            var stubs = graph.Where(n => n["isExternalReference"]?.Value<bool>() == true).ToList();
+            // Find stubs (isExternal: true)
+            var stubs = graph.Where(n => n["isExternal"]?.Value<bool>() == true).ToList();
             Assert.True(stubs.Count > 0, "Expected external stubs in JSON-LD output");
 
             // Well-known base types should be stubs (Structure i=22, Enumeration i=29)
@@ -622,6 +622,13 @@ namespace Opc.Ua.NodeSetTool.Tests
             // Stubs should have browseName
             var structStub = stubs.First(s => s["@id"]?.ToString() == "opcua:i=22");
             Assert.Equal("Structure", structStub["browseName"]?.ToString());
+
+            // Normative nodes should have isNormative: true
+            var normative = graph.Where(n => n["isNormative"]?.Value<bool>() == true).ToList();
+            Assert.True(normative.Count > 0, "Expected normative nodes in JSON-LD output");
+
+            // Stubs should NOT have isNormative
+            Assert.Null(structStub["isNormative"]);
         }
 
         [Fact]
@@ -634,7 +641,7 @@ namespace Opc.Ua.NodeSetTool.Tests
 
             var doc = JObject.Parse(File.ReadAllText(tempFile));
             var graph = (JArray)doc["@graph"]!;
-            var stubs = graph.Where(n => n["isExternalReference"]?.Value<bool>() == true).ToList();
+            var stubs = graph.Where(n => n["isExternal"]?.Value<bool>() == true).ToList();
 
             // i=22 (Structure) should have SubtypeOf i=24 (BaseDataType)
             var structStub = stubs.First(s => s["@id"]?.ToString() == "opcua:i=22");
@@ -652,8 +659,12 @@ namespace Opc.Ua.NodeSetTool.Tests
             var tempFile = TempFile(".jsonld");
             serializer.SaveJsonLd(tempFile);
 
-            // Reimport the JSON-LD
+            // Reimport the JSON-LD into an address space with services pre-loaded
             var space2 = new AddressSpace();
+            var services = new NodeSetSerializer();
+            services.Load(Path.Combine(ExamplesDir, "Opc.Ua.NodeSet2.Services.xml"));
+            services.LoadInto(space2);
+
             var ser2 = new NodeSetSerializer();
             ser2.Load(tempFile);
             ser2.LoadInto(space2);
@@ -664,9 +675,27 @@ namespace Opc.Ua.NodeSetTool.Tests
             // Model nodes should be present
             Assert.NotNull(space2.Read(DemoNsu + "i=68"));
 
-            // Stub nodes (core namespace) should NOT be in the address space
-            Assert.Null(space2.Read("i=22"));
-            Assert.Null(space2.Read("i=29"));
+            // External nodes from core namespace should already exist (from services)
+            // but should not have been duplicated by the JSON-LD import
+            Assert.NotNull(space2.Read("i=22"));
+            Assert.NotNull(space2.Read("i=29"));
+        }
+
+        [Fact]
+        public void LoadJsonLd_ExternalsFailWhenMissing()
+        {
+            var space = LoadDemoModelWithServicesIntoAddressSpace();
+            var serializer = NodeSetSerializer.FromAddressSpaceAsJsonLd(space, DemoModelUri);
+            var tempFile = TempFile(".jsonld");
+            serializer.SaveJsonLd(tempFile);
+
+            // Try to import into an empty address space — should fail
+            var emptySpace = new AddressSpace();
+            var ser2 = new NodeSetSerializer();
+            ser2.Load(tempFile);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => ser2.LoadInto(emptySpace));
+            Assert.Contains("External node(s) not found", ex.Message);
         }
 
         [Fact]
@@ -685,7 +714,7 @@ namespace Opc.Ua.NodeSetTool.Tests
             var tempJsonLd = TempFile(".jsonld");
             jsonLdSerializer.SaveJsonLd(tempJsonLd);
 
-            // Reimport from JSON-LD
+            // Reimport from JSON-LD (serializer-level round trip, no LoadInto)
             var reimported = new NodeSetSerializer();
             reimported.Load(tempJsonLd);
 
@@ -707,7 +736,12 @@ namespace Opc.Ua.NodeSetTool.Tests
             if (!File.Exists(exampleFile))
                 return; // skip if example not present
 
+            // Pre-load services so external nodes exist
             var space = new AddressSpace();
+            var services = new NodeSetSerializer();
+            services.Load(Path.Combine(ExamplesDir, "Opc.Ua.NodeSet2.Services.xml"));
+            services.LoadInto(space);
+
             var serializer = new NodeSetSerializer();
             serializer.Load(exampleFile);
             serializer.LoadInto(space);

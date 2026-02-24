@@ -23,6 +23,7 @@ namespace NodeSetTool
         private List<Json.UANode>? m_sequence;
         private List<CompareError> m_errors = new();
         private List<Json.UANode>? m_stubs;
+        private List<string>? m_externalNodeIds;
         private Dictionary<string, string>? m_nsPrefixes; // namespace URI → CURIE prefix
 
         public IReadOnlyCollection<Json.ModelDefinition> Models => m_models?.Values ?? (IReadOnlyCollection<Json.ModelDefinition>)Array.Empty<Json.ModelDefinition>();
@@ -2054,6 +2055,20 @@ namespace NodeSetTool
 
         public void LoadInto(AddressSpace addressSpace)
         {
+            // Validate that all external node IDs from JSON-LD exist in the address space
+            if (m_externalNodeIds != null && m_externalNodeIds.Count > 0)
+            {
+                var missing = new List<string>();
+                foreach (var extId in m_externalNodeIds)
+                {
+                    if (addressSpace.Read(extId) == null)
+                        missing.Add(extId);
+                }
+                if (missing.Count > 0)
+                    throw new InvalidOperationException(
+                        $"External node(s) not found in AddressSpace: {string.Join(", ", missing)}");
+            }
+
             addressSpace.AddNodeSet(BuildJson());
         }
 
@@ -2205,7 +2220,7 @@ namespace NodeSetTool
                 }
             }
 
-            // Parse model metadata
+            // Parse model metadata from root level (named graph format)
             var modelDef = new Json.ModelDefinition();
             modelDef.ModelUri = doc["modelUri"]?.ToString();
             modelDef.XmlSchemaUri = doc["xmlSchemaUri"]?.ToString();
@@ -2233,22 +2248,34 @@ namespace NodeSetTool
                 }
             }
 
-            // Parse @graph — skip stubs
+            // Parse @graph — collect externals, load normative nodes
             var graph = doc["@graph"] as JArray;
             var allNodes = new List<Json.UANode>();
+            var externalIds = new List<string>();
 
             if (graph != null)
             {
                 foreach (var entry in graph)
                 {
                     if (entry is not JObject nodeObj) continue;
-                    if (nodeObj["isExternalReference"]?.Value<bool>() == true) continue;
+
+                    // Support both new (isExternal) and legacy (isExternalReference) property names
+                    if (nodeObj["isExternal"]?.Value<bool>() == true
+                        || nodeObj["isExternalReference"]?.Value<bool>() == true)
+                    {
+                        var extId = nodeObj["@id"]?.ToString();
+                        if (extId != null)
+                            externalIds.Add(FromCurie(extId, prefixToUri));
+                        continue;
+                    }
 
                     var node = JsonLdEntryToNode(nodeObj, prefixToUri);
                     if (node != null)
                         allNodes.Add(node);
                 }
             }
+
+            m_externalNodeIds = externalIds;
 
             // Build Children hierarchy from flat list
             var nodeDict = new Dictionary<string, Json.UANode>();
@@ -2304,6 +2331,8 @@ namespace NodeSetTool
             var context = BuildJsonLdContext();
             doc["@context"] = context;
 
+            // Model metadata at root creates a named graph — optimal for SPARQL
+            // (SELECT ... FROM <modelUri> WHERE { ... })
             var model = m_models!.Values.FirstOrDefault();
             if (model != null)
             {
@@ -2420,7 +2449,8 @@ namespace NodeSetTool
             context["publicationDate"] = new JObject { ["@id"] = "opcua:PublicationDate", ["@type"] = "xsd:dateTime" };
             context["xmlSchemaUri"] = new JObject { ["@id"] = "opcua:XmlSchemaUri", ["@type"] = "@id" };
             context["requiredModels"] = "opcua:RequiredModels";
-            context["isExternalReference"] = new JObject { ["@id"] = "opcua:IsExternalReference", ["@type"] = "xsd:boolean" };
+            context["isExternal"] = new JObject { ["@id"] = "opcua:IsExternal", ["@type"] = "xsd:boolean" };
+            context["isNormative"] = new JObject { ["@id"] = "opcua:IsNormative", ["@type"] = "xsd:boolean" };
             context["references"] = "opcua:References";
             context["referenceType"] = new JObject { ["@id"] = "opcua:ReferenceType", ["@type"] = "@id" };
             context["target"] = new JObject { ["@id"] = "opcua:Target", ["@type"] = "@id" };
@@ -2519,7 +2549,7 @@ namespace NodeSetTool
 
             if (isStub)
             {
-                // Stubs: only emit SubtypeOf + isExternalReference
+                // Stubs: only emit SubtypeOf + isExternal
                 if (node.References != null)
                 {
                     foreach (var r in node.References)
@@ -2528,9 +2558,11 @@ namespace NodeSetTool
                             obj["SubtypeOf"] = ToCurie(r.TargetId);
                     }
                 }
-                obj["isExternalReference"] = true;
+                obj["isExternal"] = true;
                 return obj;
             }
+
+            obj["isNormative"] = true;
 
             if (node.SymbolicName != null)
                 obj["symbolicName"] = node.SymbolicName;
