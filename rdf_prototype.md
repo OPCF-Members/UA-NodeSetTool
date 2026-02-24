@@ -118,7 +118,7 @@ The prefix for each model namespace is auto-derived from the URI's last path seg
 
 When importing a `.jsonld` file via `LoadJsonLd` + `LoadInto(addressSpace)`:
 
-1. Nodes marked `isExternal: true` (or legacy `isExternalReference: true`) are **not**
+1. Nodes marked `isExternal: true` are **not**
    added to the address space.
 2. Instead, their node IDs are collected and **validated** — every external node must
    already exist in the target AddressSpace. If any are missing, an
